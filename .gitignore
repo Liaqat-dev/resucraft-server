@@ -1,0 +1,28 @@
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.production
+
+# Dependencies
+node_modules/
+package-lock.json
+
+
+# Logs
+logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Temporary
+tmp/
+temp/

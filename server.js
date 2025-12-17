@@ -1,0 +1,72 @@
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import authRoutes from './routes/authRoutes.js';
+import {globalErrorHandler} from "#middlewares/errorHandler.js";
+import connectDB from '#utils/db.js';
+dotenv.config();
+connectDB();
+const app = express();
+const checkAndFixIndexes = async () => {
+    console.log('\n🔍 Checking Session indexes...');
+
+    try {
+        const Session = mongoose.connection.collection('sessions');
+        const indexes = await Session.indexes();
+
+        console.log('📋 Current indexes:', JSON.stringify(indexes, null, 2));
+
+        // Look for TTL indexes
+        let foundTTL = false;
+        for (const index of indexes) {
+            if (index.expireAfterSeconds !== undefined) {
+                console.error('⚠️⚠️⚠️ TTL INDEX FOUND!');
+                console.error('   Index name:', index.name);
+                console.error('   Expire after:', index.expireAfterSeconds, 'seconds');
+                console.error('   Dropping it now...');
+
+                await Session.dropIndex(index.name);
+                console.log('✅ TTL index dropped:', index.name);
+                foundTTL = true;
+            }
+        }
+
+        if (!foundTTL) {
+            console.log('✅ No TTL indexes found - good!');
+        }
+
+    } catch (error) {
+        console.error('❌ Error checking indexes:', error.message);
+    }
+};
+
+await checkAndFixIndexes();
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+app.use(cookieParser());
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
+
+// Routes
+app.use('/api/auth', authRoutes);
+
+
+app.all('{*splat}', (req, res) => {
+    res.status(404).send('No URL found at server');
+})
+app.use(globalErrorHandler);
+
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+});
