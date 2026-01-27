@@ -1,7 +1,7 @@
 export const AUTH_CONSTANTS = {
     // JWT Configuration
     JWT_EXPIRY: '15s',                    // Access token: 15 minutes
-    REFRESH_TOKEN_EXPIRY: '30m',          // Refresh token: 30 days (long-lived)
+    REFRESH_TOKEN_EXPIRY: '30d',          // Refresh token: 30 days (long-lived)
     // NO SESSION_EXPIRY - Sessions never expire as long as tokens keep refreshing
 
     // Security Limits
