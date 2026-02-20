@@ -7,6 +7,8 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
+import educationRoutes from "#routes/educationRoutes.js";
+import experienceRoutes from "#routes/experienceRoutes.js";
 import {globalErrorHandler} from "#middlewares/errorHandler.js";
 import connectDB from '#utils/db.js';
 dotenv.config();
@@ -63,7 +65,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', authRoutes);
 
-
+app.use("/api/education", educationRoutes);
+app.use("/api/experience",experienceRoutes);
 app.all('{*splat}', (req, res) => {
     res.status(404).send('No URL found at server');
 })
