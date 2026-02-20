@@ -5,14 +5,27 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+import cors from 'cors';
+
+
 import authRoutes from './routes/authRoutes.js';
 import educationRoutes from "#routes/educationRoutes.js";
 import experienceRoutes from "#routes/experienceRoutes.js";
+import pdfRoutes from "#routes/pdfRoutes.js";
+import templateRoutes from "#routes/templateRoutes.js";
 import {globalErrorHandler} from "#middlewares/errorHandler.js";
 import connectDB from '#utils/db.js';
+
+
+
+
 dotenv.config();
 connectDB();
+
+
+
 const app = express();
 const checkAndFixIndexes = async () => {
     console.log('\n🔍 Checking Session indexes...');
@@ -52,6 +65,10 @@ await checkAndFixIndexes();
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
+app.use(cors());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
 
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL);
@@ -64,7 +81,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-
+app.use('/api', pdfRoutes);
+app.use('/api/templates', templateRoutes);
 app.use("/api/education", educationRoutes);
 app.use("/api/experience",experienceRoutes);
 app.all('{*splat}', (req, res) => {
