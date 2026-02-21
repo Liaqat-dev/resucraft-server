@@ -1,20 +1,8 @@
 import PersonalInfo from "../models/personalInfo.js";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 
-
-const uploadDir = "uploads/profilePics";
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `${Date.now()}-${file.fieldname}${ext}`);
-    },
-});
+// Use memory storage — file buffer available at req.file.buffer
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith("image/")) cb(null, true);
@@ -22,6 +10,38 @@ const fileFilter = (req, file, cb) => {
 };
 
 export const uploadProfilePic = multer({ storage, fileFilter });
+
+// Upload image buffer to imgbb; returns { url, deleteUrl }
+const uploadToImgbb = async (buffer, filename) => {
+    const base64 = buffer.toString("base64");
+
+    const form = new FormData();
+    form.append("image", base64);
+    form.append("name", filename);
+
+    const response = await fetch(
+        `https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY_V1}`,
+        { method: "POST", body: form }
+    );
+
+    const data = await response.json();
+
+    if (!data.success) throw new Error(`imgbb upload failed: ${JSON.stringify(data)}`);
+
+    return {
+        url: data.data.display_url,
+        deleteUrl: data.data.delete_url,
+    };
+};
+
+// Delete image from imgbb using the stored delete URL
+const deleteFromImgbb = async (deleteUrl) => {
+    try {
+        await fetch(deleteUrl);
+    } catch (err) {
+        console.error("imgbb delete failed:", err.message);
+    }
+};
 
 export const getPersonalInfo = async (req, res) => {
     try {
@@ -40,7 +60,6 @@ export const getPersonalInfo = async (req, res) => {
     }
 };
 
-
 export const updatePersonalInfo = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -57,7 +76,16 @@ export const updatePersonalInfo = async (req, res) => {
         personalInfo.github = github;
         personalInfo.linkedin = linkedin;
 
-        if (req.file) personalInfo.profilePic = req.file.filename;
+        if (req.file) {
+            // Delete previous profile pic from imgbb before uploading the new one
+            if (personalInfo.profilePicDeleteUrl) {
+                await deleteFromImgbb(personalInfo.profilePicDeleteUrl);
+            }
+
+            const { url, deleteUrl } = await uploadToImgbb(req.file.buffer, req.file.originalname);
+            personalInfo.profilePic = url;
+            personalInfo.profilePicDeleteUrl = deleteUrl;
+        }
 
         await personalInfo.save();
 

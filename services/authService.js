@@ -1,4 +1,5 @@
 import User from '#models/User.js';
+import PersonalInfo from '#models/personalInfo.js';
 import { AppError } from '#middlewares/errorHandler.js';
 import { AUTH_CONSTANTS, ERROR_MESSAGES } from '#constants/authConstants.js';
 import { validatePasswordStrength, generateVerificationCode, generateSecureToken } from '#utils/passwordUtils.js';
@@ -247,7 +248,16 @@ export const loginUser = async (emailOrUsername, password, req) => {
 };
 
 /**
- * Get user profilePics
+ * Fetch profilePic URL from PersonalInfo for a given userId.
+ * Returns null if no record exists yet.
+ */
+export const getProfilePic = async (userId) => {
+    const info = await PersonalInfo.findOne({ userId }).select('profilePic').lean();
+    return info?.profilePic || null;
+};
+
+/**
+ * Get user profile (includes profilePic from PersonalInfo)
  */
 export const getUserProfile = async (userId) => {
     const user = await User.findById(userId);
@@ -256,7 +266,9 @@ export const getUserProfile = async (userId) => {
         throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, 404);
     }
 
-    return user;
+    const profilePic = await getProfilePic(userId);
+
+    return { ...user.toObject(), profilePic };
 };
 
 /**

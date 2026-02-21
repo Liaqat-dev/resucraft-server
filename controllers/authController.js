@@ -6,6 +6,7 @@ import {
     forgotPasswordService,
     resetPasswordService,
     getUserProfile,
+    getProfilePic,
     changePassword
 } from '#services/authService.js';
 import { googleAuthService } from '#services/googleAuthService.js';
@@ -89,6 +90,8 @@ export const login = catchAsync(async (req, res) => {
     // Log successful login
     await logLogin(data._id, req);
 
+    const profilePic = await getProfilePic(data._id);
+
     // ✅ Send access token in response body
     return res.json({
         accessToken,
@@ -99,7 +102,8 @@ export const login = catchAsync(async (req, res) => {
             email: data.email,
             isVerified: data.isVerified,
             provider: data.provider || 'local',
-            twoFactorEnabled: data.twoFactorEnabled || false
+            twoFactorEnabled: data.twoFactorEnabled || false,
+            profilePic
         }
     });
 });
@@ -126,6 +130,8 @@ export const googleAuth = catchAsync(async (req, res) => {
     // Log successful login
     await logLogin(user._id, req);
 
+    const profilePic = await getProfilePic(user._id);
+
     // ✅ Send access token in response body
     return res.json({
         accessToken,  // Client stores in memory
@@ -135,7 +141,8 @@ export const googleAuth = catchAsync(async (req, res) => {
             username: user.username,
             email: user.email,
             isVerified: user.isVerified,
-            provider: 'google'
+            provider: 'google',
+            profilePic
         }
     });
 });

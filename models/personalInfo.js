@@ -10,6 +10,7 @@ const personalInfoSchema = new mongoose.Schema(
             github: String,
             linkedin: String,
             profilePic: String,
+            profilePicDeleteUrl: String,
     },
     { timestamps: true }
 );
