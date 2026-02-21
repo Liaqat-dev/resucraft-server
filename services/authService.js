@@ -247,7 +247,7 @@ export const loginUser = async (emailOrUsername, password, req) => {
 };
 
 /**
- * Get user profile
+ * Get user profilePics
  */
 export const getUserProfile = async (userId) => {
     const user = await User.findById(userId);

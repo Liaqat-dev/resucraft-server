@@ -17,9 +17,9 @@ import pdfRoutes from "#routes/pdfRoutes.js";
 import templateRoutes from "#routes/templateRoutes.js";
 import {globalErrorHandler} from "#middlewares/errorHandler.js";
 import connectDB from '#utils/db.js';
+import skillRoutes from "#routes/skillRoutes.js";
 
-
-
+import personalInfoRoutes from "#routes/personalInfoRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -65,7 +65,7 @@ await checkAndFixIndexes();
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
-app.use(cors());
+// app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
@@ -85,12 +85,15 @@ app.use('/api', pdfRoutes);
 app.use('/api/templates', templateRoutes);
 app.use("/api/education", educationRoutes);
 app.use("/api/experience",experienceRoutes);
+app.use("/api/skills", skillRoutes);
+
+app.use("/api/personal-info", personalInfoRoutes);
 app.all('{*splat}', (req, res) => {
     res.status(404).send('No URL found at server');
 })
 app.use(globalErrorHandler);
 
-
+app.use("/uploads", express.static("uploads"));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

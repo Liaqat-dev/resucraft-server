@@ -140,7 +140,7 @@ export const googleAuth = catchAsync(async (req, res) => {
     });
 });
 /**
- * Get user profile
+ * Get user profilePics
  */
 export const profile = catchAsync(async (req, res) => {
     const user = await getUserProfile(req.user.id);
