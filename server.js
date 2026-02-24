@@ -20,6 +20,8 @@ import connectDB from '#utils/db.js';
 import skillRoutes from "#routes/skillRoutes.js";
 
 import personalInfoRoutes from "#routes/personalInfoRoutes.js";
+import projectRoutes from "#routes/projectRoutes.js";
+import certificateRoutes from "#routes/certificateRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -88,6 +90,8 @@ app.use("/api/experience",experienceRoutes);
 app.use("/api/skills", skillRoutes);
 
 app.use("/api/personal-info", personalInfoRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/certificates", certificateRoutes);
 app.all('{*splat}', (req, res) => {
     res.status(404).send('No URL found at server');
 })
