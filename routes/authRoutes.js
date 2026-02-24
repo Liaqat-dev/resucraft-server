@@ -16,9 +16,11 @@ import {
     getSessions,
     revokeSession,
     getStats,
-    getActivity
+    getActivity,
+    updateAccountInfo
 } from '#controllers/authController.js';
 import { protect, requireVerified } from '#middlewares/authMiddleware.js';
+import { uploadProfilePic } from '#middlewares/upload.js';
 import { AUTH_CONSTANTS } from '#constants/authConstants.js';
 
 const router = express.Router();
@@ -82,6 +84,9 @@ router.post('/refresh', refresh);
 
 // User Profile
 router.get('/profile', protect, profile);
+
+//accountInfo userName and password
+router.put('/update-account-info', protect, requireVerified, uploadProfilePic.single('profilePic'), updateAccountInfo);
 
 // Password Management
 router.post('/change-password', protect, requireVerified, changeUserPassword);

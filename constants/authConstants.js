@@ -15,8 +15,6 @@ export const AUTH_CONSTANTS = {
     PASSWORD_MIN_UPPERCASE: 1,
     PASSWORD_MIN_NUMBERS: 1,
     PASSWORD_MIN_SYMBOLS: 1,
-    PASSWORD_HISTORY_LIMIT: 5, // Remember last 5 passwords
-
     // Verification & Reset
     VERIFICATION_CODE_EXPIRY: 24 * 60 * 60 * 1000, // 24 hours
     VERIFICATION_CODE_LENGTH: 6,
@@ -78,7 +76,6 @@ export const ERROR_MESSAGES = {
     EMAIL_IN_USE: 'Email is already in use',
     USERNAME_IN_USE: 'Username is already in use',
     WEAK_PASSWORD: 'Password does not meet security requirements',
-    PASSWORD_REUSED: 'Cannot reuse a recent password',
     INVALID_TOKEN: 'Invalid or expired token',
     SESSION_EXPIRED: 'Session has expired. Please log in again.',
     TWO_FACTOR_REQUIRED: 'Two-factor authentication code required',

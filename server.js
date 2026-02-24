@@ -81,7 +81,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api', pdfRoutes);
+app.use('/api/pdf', pdfRoutes);
 app.use('/api/templates', templateRoutes);
 app.use("/api/education", educationRoutes);
 app.use("/api/experience",experienceRoutes);

@@ -6,7 +6,6 @@ import {
     forgotPasswordService,
     resetPasswordService,
     getUserProfile,
-    getProfilePic,
     changePassword
 } from '#services/authService.js';
 import { googleAuthService } from '#services/googleAuthService.js';
@@ -26,9 +25,12 @@ import {
     detectSuspiciousActivity,
     getAuthStats
 } from '#services/auditService.js';
+import { uploadToImgbb, deleteFromImgbb } from '#services/imgbb.js';
+import User from '#models/User.js';
 import catchAsync from '#utils/catchAsync.js';
 import { AUTH_CONSTANTS } from '#constants/authConstants.js';
 import {AppError} from "#middlewares/errorHandler.js";
+import fs from 'fs';
 
 /**
  * Register a new user
@@ -154,9 +156,6 @@ export const profile = catchAsync(async (req, res) => {
     res.json(user);
 });
 
-/**
- * Refresh access token
- */
 /**
  * Refresh access token
  */
@@ -362,4 +361,48 @@ export const changeUserPassword = catchAsync(async (req, res) => {
     const data = await changePassword(userId, currentPassword, newPassword, req);
 
     res.json(data);
+});
+
+/**
+ * Update account info (username and/or profile picture)
+ */
+export const updateAccountInfo = catchAsync(async (req, res) => {
+    const userId = req.user._id;
+    const { username } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) throw new AppError('User not found', 404);
+
+    if (username !== undefined) {
+        const trimmed = username.toLowerCase().trim();
+        if (trimmed !== user.username) {
+            const taken = await User.findOne({ username: trimmed, _id: { $ne: userId } });
+            if (taken) throw new AppError('Username is already taken', 400);
+            user.username = trimmed;
+        }
+    }
+
+    if (req.file) {
+        if (user.profilePic?.deleteUrl) {
+            await deleteFromImgbb(user.profilePic.deleteUrl);
+        }
+
+        const buffer = fs.readFileSync(req.file.path);
+        const uploaded = await uploadToImgbb(buffer, req.file.filename);
+        fs.unlinkSync(req.file.path);
+
+        user.profilePic = uploaded;
+    }
+
+    await user.save({ validateModifiedOnly: true });
+
+    res.json({
+        message: 'Account info updated successfully',
+        user: {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            profilePic: user.profilePic
+        }
+    });
 });

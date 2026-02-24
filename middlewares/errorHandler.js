@@ -25,8 +25,6 @@ function sendErrorProd(error, response) {
             message: 'Something went wrong'
         })
     }
-
-
 }
 
 function sendErrorDev(error, response) {
@@ -71,6 +69,7 @@ function handleValidationErrorDB(error) {
     Object.values(error.errors).forEach(err => {
         fieldErrors[err.path] = err.message;
     });
+
 
     return new AppError(
         "Validation failed",

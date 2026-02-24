@@ -1,13 +1,10 @@
 import express from "express";
-import { getPersonalInfo, updatePersonalInfo, uploadProfilePic } from "../controllers/personalInfoController.js";
-import { protect } from "../middlewares/authMiddleware.js";
+import {getPersonalInfo, updatePersonalInfo,} from "../controllers/personalInfoController.js";
+import {protect} from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Require authentication
-router.use(protect);
-
-router.get("/", getPersonalInfo);
-router.put("/", uploadProfilePic.single("profilePic"), updatePersonalInfo);
+router.get("/",protect, getPersonalInfo);
+router.put("/",protect, updatePersonalInfo);
 
 export default router;

@@ -4,13 +4,6 @@ import { AUTH_CONSTANTS } from "#constants/authConstants.js";
 
 const userSchema = new mongoose.Schema(
     {
-        name: {
-            type: String,
-            required: [true, "Name is required"],
-            trim: true,
-            minlength: [3, "Name must be at least 3 characters"],
-        },
-
         username: {
             type: String,
             required: [true, "Username is required"],
@@ -55,11 +48,6 @@ const userSchema = new mongoose.Schema(
                 message: `Password must be at least ${AUTH_CONSTANTS.PASSWORD_MIN_LENGTH} characters and contain uppercase, lowercase, number, and special character`,
             },
         },
-
-        passwordHistory: [{
-            password: String,
-            changedAt: { type: Date, default: Date.now }
-        }],
 
         provider: {
             type: String,
@@ -122,8 +110,12 @@ const userSchema = new mongoose.Schema(
 
         // Profile
         profilePic: {
-            type: String,
-            default: ""
+            url: {
+                type: String,
+            },
+            deleteUrl: {
+                type: String
+            }
         },
 
         // Metadata
@@ -135,7 +127,6 @@ const userSchema = new mongoose.Schema(
         toJSON: {
             transform: function(doc, ret) {
                 delete ret.password;
-                delete ret.passwordHistory;
                 delete ret.verificationCode;
                 delete ret.verificationCodeExpires;
                 delete ret.resetPasswordToken;
@@ -164,19 +155,6 @@ userSchema.virtual('isLocked').get(function() {
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) return next();
 
-    // Store in password history before hashing
-    if (this.isModified("password") && !this.isNew) {
-        this.passwordHistory.unshift({
-            password: this.password,
-            changedAt: new Date()
-        });
-
-        // Keep only last N passwords
-        if (this.passwordHistory.length > AUTH_CONSTANTS.PASSWORD_HISTORY_LIMIT) {
-            this.passwordHistory = this.passwordHistory.slice(0, AUTH_CONSTANTS.PASSWORD_HISTORY_LIMIT);
-        }
-    }
-
     this.password = await bcrypt.hash(this.password, 12);
     this.lastPasswordChange = new Date();
     next();
@@ -185,20 +163,6 @@ userSchema.pre("save", async function (next) {
 // Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
-};
-
-// Check if password was used recently
-userSchema.methods.wasPasswordUsedRecently = async function(newPassword) {
-    if (!this.passwordHistory || this.passwordHistory.length === 0) {
-        return false;
-    }
-
-    for (const oldPass of this.passwordHistory) {
-        const isMatch = await bcrypt.compare(newPassword, oldPass.password);
-        if (isMatch) return true;
-    }
-
-    return false;
 };
 
 // Increment login attempts

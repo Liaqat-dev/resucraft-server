@@ -10,11 +10,11 @@ import { logRegistration, logFailedLogin, logEmailVerified, logPasswordResetRequ
  * Register a new user
  */
 export const registerUser = async (userData, req) => {
-    const { name, username, email, password, provider = 'local' } = userData;
+    const {  username, email, password, provider = 'local' } = userData;
 
     // Validate required fields
-    if (!name || !email || !username) {
-        throw new AppError('Name, email, and username are required', 400);
+    if (!email || !username) {
+        throw new AppError('Email, and Username are required', 400);
     }
 
     // Validate password for local auth
@@ -55,7 +55,6 @@ export const registerUser = async (userData, req) => {
 
     // Create user
     const user = await User.create({
-        name,
         username: username.toLowerCase(),
         email: email.toLowerCase(),
         password,
@@ -247,28 +246,17 @@ export const loginUser = async (emailOrUsername, password, req) => {
     return user;
 };
 
-/**
- * Fetch profilePic URL from PersonalInfo for a given userId.
- * Returns null if no record exists yet.
- */
-export const getProfilePic = async (userId) => {
-    const info = await PersonalInfo.findOne({ userId }).select('profilePic').lean();
-    return info?.profilePic || null;
-};
+
 
 /**
- * Get user profile (includes profilePic from PersonalInfo)
+ * Get user profile
  */
 export const getUserProfile = async (userId) => {
     const user = await User.findById(userId);
-
     if (!user) {
         throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, 404);
     }
-
-    const profilePic = await getProfilePic(userId);
-
-    return { ...user.toObject(), profilePic };
+    return user;
 };
 
 /**
@@ -327,16 +315,10 @@ export const resetPasswordService = async (token, password, confirmPassword, req
     const user = await User.findOne({
         resetPasswordToken: token,
         resetPasswordExpires: { $gt: new Date() }
-    }).select('+password +passwordHistory');
+    }).select('+password');
 
     if (!user) {
         throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, 400);
-    }
-
-    // Check if password was used recently
-    const wasUsed = await user.wasPasswordUsedRecently(password);
-    if (wasUsed) {
-        throw new AppError(ERROR_MESSAGES.PASSWORD_REUSED, 400);
     }
 
     // Update password
@@ -363,7 +345,7 @@ export const changePassword = async (userId, currentPassword, newPassword, req) 
         throw new AppError('Current password and new password are required', 400);
     }
 
-    const user = await User.findById(userId).select('+password +passwordHistory');
+    const user = await User.findById(userId).select('+password');
 
     if (!user) {
         throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, 404);
@@ -383,12 +365,6 @@ export const changePassword = async (userId, currentPassword, newPassword, req) 
             400,
             { password: passwordValidation.errors }
         );
-    }
-
-    // Check if password was used recently
-    const wasUsed = await user.wasPasswordUsedRecently(newPassword);
-    if (wasUsed) {
-        throw new AppError(ERROR_MESSAGES.PASSWORD_REUSED, 400);
     }
 
     // Update password
