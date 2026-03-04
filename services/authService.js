@@ -1,16 +1,22 @@
 import User from '#models/User.js';
-import PersonalInfo from '#models/personalInfo.js';
-import { AppError } from '#middlewares/errorHandler.js';
-import { AUTH_CONSTANTS, ERROR_MESSAGES } from '#constants/authConstants.js';
-import { validatePasswordStrength, generateVerificationCode, generateSecureToken } from '#utils/passwordUtils.js';
-import { sendVerificationEmail, sendPasswordResetEmail } from '#services/emailService.js';
-import { logRegistration, logFailedLogin, logEmailVerified, logPasswordResetRequest, logPasswordResetComplete, logAccountLocked } from '#services/auditService.js';
+import {AppError} from '#middlewares/errorHandler.js';
+import {AUTH_CONSTANTS, ERROR_MESSAGES} from '#constants/authConstants.js';
+import {generateSecureToken, generateVerificationCode, validatePasswordStrength} from '#utils/passwordUtils.js';
+import {sendPasswordResetEmail, sendVerificationEmail} from '#services/emailService.js';
+import {
+    logAccountLocked,
+    logEmailVerified,
+    logFailedLogin,
+    logPasswordResetComplete,
+    logPasswordResetRequest,
+    logRegistration
+} from '#services/auditService.js';
 
 /**
  * Register a new user
  */
 export const registerUser = async (userData, req) => {
-    const {  username, email, password, provider = 'local' } = userData;
+    const {username, email, password, provider = 'local'} = userData;
 
     // Validate required fields
     if (!email || !username) {
@@ -28,14 +34,14 @@ export const registerUser = async (userData, req) => {
             throw new AppError(
                 'Password does not meet security requirements',
                 400,
-                { password: passwordValidation.errors }
+                {password: passwordValidation.errors}
             );
         }
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({
-        $or: [{ email }, { username }]
+        $or: [{email}, {username}]
     });
 
     if (existingUser) {
@@ -85,13 +91,13 @@ export const registerUser = async (userData, req) => {
  * Verify user email
  */
 export const verifyUserEmail = async (data, req) => {
-    const { email, code } = data;
+    const {email, code} = data;
 
     if (!email || !code) {
         throw new AppError('Email and verification code are required', 400);
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() })
+    const user = await User.findOne({email: email.toLowerCase()})
         .select('+verificationCode +verificationCodeExpires');
 
     if (!user) {
@@ -137,7 +143,7 @@ export const resendVerificationCode = async (email, req) => {
         throw new AppError('Email is required', 400);
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() })
+    const user = await User.findOne({email: email.toLowerCase()})
         .select('+verificationCodeExpires');
 
     if (!user) {
@@ -181,8 +187,8 @@ export const loginUser = async (emailOrUsername, password, req) => {
     // Find user
     const user = await User.findOne({
         $or: [
-            { email: emailOrUsername.toLowerCase() },
-            { username: emailOrUsername.toLowerCase() }
+            {email: emailOrUsername.toLowerCase()},
+            {username: emailOrUsername.toLowerCase()}
         ]
     }).select('+password +loginAttempts +lockUntil +twoFactorEnabled +twoFactorSecret');
 
@@ -247,7 +253,6 @@ export const loginUser = async (emailOrUsername, password, req) => {
 };
 
 
-
 /**
  * Get user profile
  */
@@ -267,7 +272,7 @@ export const forgotPasswordService = async (email, req) => {
         throw new AppError('Email is required', 400);
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({email: email.toLowerCase()});
 
     // Don't reveal if email exists
     if (!user) {
@@ -307,14 +312,14 @@ export const resetPasswordService = async (token, password, confirmPassword, req
         throw new AppError(
             'Password does not meet security requirements',
             400,
-            { password: passwordValidation.errors }
+            {password: passwordValidation.errors}
         );
     }
 
     // Find user with valid token
     const user = await User.findOne({
         resetPasswordToken: token,
-        resetPasswordExpires: { $gt: new Date() }
+        resetPasswordExpires: {$gt: new Date()}
     }).select('+password');
 
     if (!user) {
@@ -363,7 +368,7 @@ export const changePassword = async (userId, currentPassword, newPassword, req) 
         throw new AppError(
             'Password does not meet security requirements',
             400,
-            { password: passwordValidation.errors }
+            {password: passwordValidation.errors}
         );
     }
 

@@ -92,7 +92,7 @@ export const login = catchAsync(async (req, res) => {
     // Log successful login
     await logLogin(data._id, req);
 
-    const profilePic = await getProfilePic(data._id);
+    // const profilePic = await getProfilePic(data._id);
 
     // ✅ Send access token in response body
     return res.json({
@@ -101,11 +101,12 @@ export const login = catchAsync(async (req, res) => {
             _id: data._id,
             name: data.name,
             username: data.username,
+            profilePic:data.profilePic,
             email: data.email,
             isVerified: data.isVerified,
             provider: data.provider || 'local',
             twoFactorEnabled: data.twoFactorEnabled || false,
-            profilePic
+
         }
     });
 });

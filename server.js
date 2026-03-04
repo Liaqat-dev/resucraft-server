@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 
-import authRoutes from './routes/authRoutes.js';
+import authRoutes from '#routes/authRoutes.js';
 import educationRoutes from "#routes/educationRoutes.js";
 import experienceRoutes from "#routes/experienceRoutes.js";
 import pdfRoutes from "#routes/pdfRoutes.js";
