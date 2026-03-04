@@ -142,8 +142,6 @@ const userSchema = new mongoose.Schema(
 );
 
 // Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
 userSchema.index({ lockUntil: 1 });
 
 // Virtual for checking if account is locked

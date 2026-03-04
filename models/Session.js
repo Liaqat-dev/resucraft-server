@@ -14,14 +14,12 @@ const sessionSchema = new mongoose.Schema(
             type: String,
             required: true,
             unique: true,
-            index: true
         },
 
         refreshToken: {
             type: String,
             required: true,
             unique: true,
-            index: true
         },
 
         // Device Information
@@ -91,8 +89,6 @@ const sessionSchema = new mongoose.Schema(
 // Indexes
 sessionSchema.index({ user: 1, isActive: 1 });
 // ✅ REMOVED: sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-sessionSchema.index({ accessToken: 1 });
-sessionSchema.index({ refreshToken: 1 });
 
 // Virtual for checking if session is expired
 sessionSchema.virtual('isExpired').get(function() {

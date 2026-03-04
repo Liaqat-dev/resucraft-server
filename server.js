@@ -29,40 +29,7 @@ connectDB();
 
 
 const app = express();
-const checkAndFixIndexes = async () => {
-    console.log('\n🔍 Checking Session indexes...');
 
-    try {
-        const Session = mongoose.connection.collection('sessions');
-        const indexes = await Session.indexes();
-
-        console.log('📋 Current indexes:', JSON.stringify(indexes, null, 2));
-
-        // Look for TTL indexes
-        let foundTTL = false;
-        for (const index of indexes) {
-            if (index.expireAfterSeconds !== undefined) {
-                console.error('⚠️⚠️⚠️ TTL INDEX FOUND!');
-                console.error('   Index name:', index.name);
-                console.error('   Expire after:', index.expireAfterSeconds, 'seconds');
-                console.error('   Dropping it now...');
-
-                await Session.dropIndex(index.name);
-                console.log('✅ TTL index dropped:', index.name);
-                foundTTL = true;
-            }
-        }
-
-        if (!foundTTL) {
-            console.log('✅ No TTL indexes found - good!');
-        }
-
-    } catch (error) {
-        console.error('❌ Error checking indexes:', error.message);
-    }
-};
-
-await checkAndFixIndexes();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
