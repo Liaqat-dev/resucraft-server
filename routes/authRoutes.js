@@ -17,7 +17,8 @@ import {
     revokeSession,
     getStats,
     getActivity,
-    updateAccountInfo
+    updateAccountInfo,
+    getProfileCompletion
 } from '#controllers/authController.js';
 import { protect, requireVerified } from '#middlewares/authMiddleware.js';
 import { uploadProfilePic } from '#middlewares/upload.js';
@@ -84,6 +85,7 @@ router.post('/refresh', refresh);
 
 // User Profile
 router.get('/profile', protect, profile);
+router.get('/profile-completion', protect, requireVerified, getProfileCompletion);
 
 //accountInfo userName and password
 router.put('/update-account-info', protect, requireVerified, uploadProfilePic.single('profilePic'), updateAccountInfo);
