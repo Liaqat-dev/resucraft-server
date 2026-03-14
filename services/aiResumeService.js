@@ -1,0 +1,172 @@
+import { GoogleGenAI } from '@google/genai';
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+/**
+ * Walk template data and collect all text element contents with unique path keys.
+ * Keys encode the location so we can write values back precisely.
+ */
+function extractTextFields(templateData) {
+    const fields = {};
+    const { elements = [], sections = [] } = templateData;
+
+    // Top-level elements (not inside any section)
+    elements.forEach((el, eIdx) => {
+        if (el.type !== 'line-break' && el.content && String(el.content).trim()) {
+            fields[`el__${eIdx}`] = String(el.content);
+        }
+    });
+
+    // Section elements and sub-section elements
+    sections.forEach((section, sIdx) => {
+        (section.elements || []).forEach((el, eIdx) => {
+            if (el.type !== 'line-break' && el.content && String(el.content).trim()) {
+                fields[`sec${sIdx}_el${eIdx}`] = String(el.content);
+            }
+        });
+
+        (section['sub-sections'] || []).forEach((ss, ssIdx) => {
+            (ss.elements || []).forEach((el, eIdx) => {
+                if (el.type !== 'line-break' && el.content && String(el.content).trim()) {
+                    fields[`sec${sIdx}_ss${ssIdx}_el${eIdx}`] = String(el.content);
+                }
+            });
+        });
+    });
+
+    return fields;
+}
+
+/**
+ * Apply a map of { pathKey: newValue } back into a deep-cloned templateData.
+ */
+function applyFieldValues(templateData, values) {
+    const data = JSON.parse(JSON.stringify(templateData));
+    const { elements = [], sections = [] } = data;
+
+    elements.forEach((el, eIdx) => {
+        const v = values[`el__${eIdx}`];
+        if (v !== undefined) el.content = v;
+    });
+
+    sections.forEach((section, sIdx) => {
+        (section.elements || []).forEach((el, eIdx) => {
+            const v = values[`sec${sIdx}_el${eIdx}`];
+            if (v !== undefined) el.content = v;
+        });
+
+        (section['sub-sections'] || []).forEach((ss, ssIdx) => {
+            (ss.elements || []).forEach((el, eIdx) => {
+                const v = values[`sec${sIdx}_ss${ssIdx}_el${eIdx}`];
+                if (v !== undefined) el.content = v;
+            });
+        });
+    });
+
+    return data;
+}
+
+function buildPrompt(profile, jobDescription, fields) {
+    const { personalInfo, education, experience, skills, projects, certificates } = profile;
+
+    const educationText = education.length
+        ? education.map(e =>
+            `- ${e.degree}${e.fieldOfStudy ? ' in ' + e.fieldOfStudy : ''} at ${e.school} (${e.startDate} – ${e.endDate || 'Present'})${e.grade ? ', Grade: ' + e.grade : ''}${e.description ? '\n  ' + e.description : ''}`
+        ).join('\n')
+        : 'None';
+
+    const experienceText = experience.length
+        ? experience.map(e =>
+            `- ${e.role} at ${e.company} (${e.startDate} – ${e.currentlyWorking ? 'Present' : (e.endDate || 'N/A')})${e.description ? '\n  ' + e.description : ''}`
+        ).join('\n')
+        : 'None';
+
+    const skillsText = skills.length
+        ? skills.map(s => `${s.name} (${s.category})`).join(', ')
+        : 'None';
+
+    const projectsText = projects.length
+        ? projects.map(p =>
+            `- ${p.title}${p.description ? ': ' + p.description : ''}${p.technologies?.length ? ' [' + p.technologies.join(', ') + ']' : ''}`
+        ).join('\n')
+        : 'None';
+
+    const certsText = certificates.length
+        ? certificates.map(c => `- ${c.name} by ${c.issuer} (${c.issueDate})`).join('\n')
+        : 'None';
+
+    return `You are an expert resume writer. Fill a resume template with content tailored to a specific job application.
+
+## Candidate Profile
+Name: ${personalInfo?.firstName || ''} ${personalInfo?.lastName || ''}
+Profession: ${personalInfo?.profession || ''}
+Email: ${personalInfo?.email || ''}
+Phone: ${personalInfo?.phone || ''}
+Address: ${personalInfo?.address || ''}
+Bio: ${personalInfo?.bio || ''}
+GitHub: ${personalInfo?.github || ''}
+LinkedIn: ${personalInfo?.linkedin || ''}
+
+Education:
+${educationText}
+
+Work Experience:
+${experienceText}
+
+Skills: ${skillsText}
+
+Projects:
+${projectsText}
+
+Certificates:
+${certsText}
+
+## Target Job Description
+${jobDescription}
+
+## Template Fields to Fill
+Each key identifies a text element in the resume template. The value is the current placeholder text.
+
+${JSON.stringify(fields, null, 2)}
+
+## Instructions
+Return ONLY a valid JSON object with the SAME keys. Replace each value with tailored content that:
+- Matches the candidate's actual profile data
+- Is optimized for the target job description
+- Uses strong, professional language
+- Keeps each field roughly the same length as the placeholder
+- Does NOT invent qualifications not in the profile
+- Returns ONLY the JSON object — no markdown, no code fences, no explanation`;
+}
+
+/**
+ * Main entry point: generates a filled copy of templateData tailored to the job description.
+ */
+export async function generateTailoredResume(templateData, jobDescription, profile) {
+    const fields = extractTextFields(templateData);
+
+    if (Object.keys(fields).length === 0) {
+        throw new Error('No fillable text fields found in this template');
+    }
+
+    const prompt = buildPrompt(profile, jobDescription, fields);
+
+    const response = await ai.models.generateContentStream({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+
+    let fullText = '';
+    for await (const chunk of response) {
+        fullText += chunk.text;
+    }
+
+    // Strip markdown code fences in case Gemini wraps the response
+    const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+        throw new Error('AI did not return a valid JSON response');
+    }
+
+    const values = JSON.parse(jsonMatch[0]);
+    return applyFieldValues(templateData, values);
+}
