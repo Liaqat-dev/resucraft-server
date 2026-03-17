@@ -154,6 +154,7 @@ export async function generateTailoredResume(templateData, jobDescription, profi
     const response = await ai.models.generateContentStream({
         model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { thinkingConfig: { thinkingBudget: 0 } },
     });
 
     let fullText = '';

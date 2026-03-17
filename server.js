@@ -1,8 +1,8 @@
 import dns from 'node:dns';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-
-
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import bodyParser from 'body-parser';
@@ -23,9 +23,13 @@ import personalInfoRoutes from "#routes/personalInfoRoutes.js";
 import projectRoutes from "#routes/projectRoutes.js";
 import certificateRoutes from "#routes/certificateRoutes.js";
 import aiRoutes from "#routes/aiRoutes.js";
+import { handleInterviewSocket } from '#controllers/interviewController.js';
 
 dotenv.config();
-connectDB();
+connectDB().catch(err => {
+    console.error('❌ DB connection failed:', err.message);
+    process.exit(1);
+});
 
 
 
@@ -80,13 +84,27 @@ app.use("/api/personal-info", personalInfoRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/ai", aiRoutes);
+
+const PORT = process.env.PORT || 5000;
+const httpServer = createServer(app);
+
+// ── WebSocket server for live interview ───────────────────────────────────────
+const wss = new WebSocketServer({ noServer: true });
+wss.on('connection', (ws, req) => handleInterviewSocket(ws, req));
+
+httpServer.on('upgrade', (req, socket, head) => {
+    if (req.url === '/ws/interview') {
+        wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+    } else {
+        socket.destroy();
+    }
+});
+
 app.all('{*splat}', (req, res) => {
     res.status(404).send('No URL found at server');
 })
 app.use(globalErrorHandler);
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 });

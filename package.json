@@ -22,7 +22,8 @@
     "mongoose": "^8.0.0",
     "multer": "^2.0.2",
     "nodemailer": "7.0.11",
-    "puppeteer": "^21.5.2"
+    "puppeteer": "^21.5.2",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
