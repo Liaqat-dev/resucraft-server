@@ -7,18 +7,22 @@ import { logRegistration } from '#services/auditService.js';
  */
 export const googleAuthService = async (googleAccessToken, req) => {
     try {
-        // Verify Google token and get user info
-        const response = await fetch(
-            `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${googleAccessToken}`
-        );
+        // Auto-detect token type: JWTs start with "eyJ" (ID token), otherwise access token
+        const isIdToken = googleAccessToken.startsWith('eyJ');
+        const verifyUrl = isIdToken
+            ? `https://oauth2.googleapis.com/tokeninfo?id_token=${googleAccessToken}`
+            : `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${googleAccessToken}`;
+
+        const response = await fetch(verifyUrl);
 
         if (!response.ok) {
-            throw new AppError('Invalid Google access token', 401);
+            throw new AppError('Invalid Google token', 401);
         }
 
         const googleUser = await response.json();
 
-        if (!googleUser.email || !googleUser.email_verified) {
+        const emailVerified = googleUser.email_verified === true || googleUser.email_verified === 'true';
+        if (!googleUser.email || !emailVerified) {
             throw new AppError('Google email not verified', 400);
         }
 

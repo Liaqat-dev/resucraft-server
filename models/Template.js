@@ -1,7 +1,10 @@
 import mongoose from "mongoose";
 
+const CATEGORIES = ['Modern', 'Classic', 'Creative', 'Minimal', 'Professional', 'Other'];
+
 const templateSchema = new mongoose.Schema({
     name: { type: String, required: true },
+    category: { type: String, enum: CATEGORIES, default: 'Other' },
     data: {
         elements: [mongoose.Schema.Types.Mixed],
         sections: [mongoose.Schema.Types.Mixed],
