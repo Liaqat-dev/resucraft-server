@@ -85,7 +85,7 @@ export function handleInterviewSocket(ws, req) {
             }
 
             case 'audio_chunk': {
-                if (msg.data) gemini?.sendAudio(msg.data);
+                if (msg.data) gemini?.sendAudio(msg.data, msg.mimeType);
                 break;
             }
 

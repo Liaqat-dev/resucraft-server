@@ -1,4 +1,40 @@
 import { GoogleGenAI, Modality } from '@google/genai';
+import { spawn } from 'child_process';
+import { createRequire } from 'module';
+
+const _require = createRequire(import.meta.url);
+const ffmpegPath = _require('ffmpeg-static');
+
+/** Transcode any audio buffer (M4A/AAC/WebM/OGG) to raw 16 kHz mono Int16 PCM. */
+function transcodeToRawPCM(base64Input) {
+    return new Promise((resolve, reject) => {
+        const inputBuf = Buffer.from(base64Input, 'base64');
+        const pcmChunks = [];
+        const stderrChunks = [];
+
+        const ff = spawn(ffmpegPath, [
+            '-hide_banner', '-loglevel', 'error',
+            '-i', 'pipe:0',
+            '-f', 's16le',
+            '-ar', '16000',
+            '-ac', '1',
+            'pipe:1',
+        ]);
+
+        ff.stdout.on('data', chunk => pcmChunks.push(chunk));
+        ff.stdout.on('end', () => resolve(Buffer.concat(pcmChunks).toString('base64')));
+        ff.stderr.on('data', chunk => stderrChunks.push(chunk));
+        ff.on('error', reject);
+        ff.on('close', (code) => {
+            if (code !== 0) {
+                const stderr = Buffer.concat(stderrChunks).toString();
+                reject(new Error(`ffmpeg exited ${code}: ${stderr}`));
+            }
+        });
+        ff.stdin.write(inputBuf);
+        ff.stdin.end();
+    });
+}
 
 const LIVE_MODEL = 'gemini-2.5-flash-native-audio-latest';
 
@@ -83,10 +119,23 @@ export class GeminiLiveSession {
         }
     }
 
-    sendAudio(base64PCM) {
+    async sendAudio(base64Data, mimeType = 'audio/pcm;rate=16000') {
         if (!this.session) return;
+        let pcm = base64Data;
+        if (!mimeType || !mimeType.includes('pcm')) {
+            try {
+                pcm = await transcodeToRawPCM(base64Data);
+            } catch (err) {
+                console.error('[Transcode] Failed to convert audio to PCM:', err.message);
+                return;
+            }
+        }
+
+        // Session may have been closed while transcoding was in flight.
+        if (!this.session) return;
+
         this.session.sendRealtimeInput({
-            audio: { data: base64PCM, mimeType: 'audio/pcm;rate=16000' },
+            audio: { data: pcm, mimeType: 'audio/pcm;rate=16000' },
         });
     }
 
