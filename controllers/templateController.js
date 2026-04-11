@@ -16,8 +16,7 @@ export const saveTemplate = async (req, res) => {
     try {
         if (!checkDb(res)) return;
 
-        const templateData = req.body;
-        const template = new Template(templateData);
+        const template = new Template({ ...req.body, userId: req.user._id });
         template.updatedAt = new Date();
 
         await template.save();
@@ -51,6 +50,10 @@ export const getTemplate = async (req, res) => {
             });
         }
 
+        // if (template.userId.toString() !== req.user._id.toString()) {
+        //     return res.status(403).json({ error: 'Access denied' });
+        // }
+
         console.log(`Template loaded from MongoDB: ${req.params.id}`);
 
         res.json({
@@ -78,7 +81,7 @@ export const listTemplates = async (req, res) => {
             });
         }
 
-        const templates = await Template.find()
+        const templates = await Template.find({ userId: req.user._id })
             .sort({ updatedAt: -1 })
             .limit(50);
 
@@ -92,20 +95,43 @@ export const listTemplates = async (req, res) => {
     }
 };
 
+export const listAllTemplates = async (req, res) => {
+    try {
+        if (!mongoose.connection.readyState) {
+            return res.status(503).json({
+                error: 'Database not available',
+                templates: []
+            });
+        }
+
+        const templates = await Template.find()
+            .sort({ updatedAt: -1 })
+            .limit(100);
+
+        res.json({ success: true, templates });
+    } catch (error) {
+        console.error('List All Templates Error:', error);
+        res.status(500).json({
+            error: 'Failed to list templates',
+            message: error.message
+        });
+    }
+};
+
 export const updateTemplate = async (req, res) => {
     try {
         if (!checkDb(res)) return;
 
-        const template = await Template.findByIdAndUpdate(
-            req.params.id,
+        const template = await Template.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
             { ...req.body, updatedAt: new Date() },
             { new: true }
         );
 
         if (!template) {
             return res.status(404).json({
-                error: 'Template not found',
-                message: `Template with ID ${req.params.id} does not exist`
+                error: 'Template not found or access denied',
+                message: `Template with ID ${req.params.id} does not exist or you do not own it`
             });
         }
 
@@ -129,7 +155,14 @@ export const deleteTemplate = async (req, res) => {
     try {
         if (!checkDb(res)) return;
 
-        await Template.findByIdAndDelete(req.params.id);
+        const deleted = await Template.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+
+        if (!deleted) {
+            return res.status(404).json({
+                error: 'Template not found or access denied',
+                message: `Template with ID ${req.params.id} does not exist or you do not own it`
+            });
+        }
 
         console.log(`Template deleted: ${req.params.id}`);
 

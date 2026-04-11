@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const CATEGORIES = ['Modern', 'Classic', 'Creative', 'Minimal', 'Professional', 'Other'];
 
 const templateSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     name: { type: String, required: true },
     category: { type: String, enum: CATEGORIES, default: 'Other' },
     data: {

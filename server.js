@@ -27,7 +27,7 @@ import { handleInterviewSocket } from '#controllers/interviewController.js';
 
 dotenv.config();
 connectDB().catch(err => {
-    console.error('❌ DB connection failed:', err.message);
+    console.error('DB connection failed:', err.message);
     process.exit(1);
 });
 
@@ -43,9 +43,6 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Allowed browser origins (web client + Expo web dev server).
-// React Native native runtime does NOT enforce CORS, so mobile requests
-// with no Origin header are passed through unconditionally.
 const ALLOWED_ORIGINS = [
     process.env.FRONTEND_URL,          // web client (e.g. http://localhost:5173)
     'http://localhost:8081',            // Expo web / Metro bundler

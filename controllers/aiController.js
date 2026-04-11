@@ -7,7 +7,6 @@ import Certificate from '#models/certificate.js';
 import Template from '#models/Template.js';
 import { generateTailoredResume } from '#services/aiResumeService.js';
 import { AppError } from '#middlewares/errorHandler.js';
-
 export const generateResume = async (req, res, next) => {
     try {
         const { templateId, jobDescription } = req.body;

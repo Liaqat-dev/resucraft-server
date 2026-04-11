@@ -1,15 +1,22 @@
-import express from'express';
+import express from 'express';
 import {
     saveTemplate,
     getTemplate,
     listTemplates,
+    listAllTemplates,
     updateTemplate,
     deleteTemplate
 } from '#controllers/templateController.js';
+import { protect, requireVerified } from '#middlewares/authMiddleware.js';
+
 const router = express.Router();
+
+router.get('/:id', getTemplate);
+router.get('/all', listAllTemplates);
+router.use(protect, requireVerified);
+
 router.post('/save', saveTemplate);
 router.get('/', listTemplates);
-router.get('/:id', getTemplate);
 router.put('/:id', updateTemplate);
 router.delete('/:id', deleteTemplate);
 
