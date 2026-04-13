@@ -1,4 +1,4 @@
-import puppeteer    from "puppeteer";
+import puppeteer    from "puppeteer-core";
 import { mmToPx, nestedToFlat, renderSections, renderElement } from '#utils/transformUtils.js';
 
 /**
@@ -94,6 +94,7 @@ export const generatePdfBuffer = async ({ elements, sections, canvasSize, margin
 `;
 
     const browser = await puppeteer.launch({
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
         headless: 'new',
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });

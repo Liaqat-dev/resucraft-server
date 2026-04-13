@@ -1,5 +1,7 @@
 # Environment Variables
 .env
+yarn.lock
+package-lock.json
 .env.local
 .env.development
 .env.production
