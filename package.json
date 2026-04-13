@@ -1,5 +1,5 @@
 {
-  "name": "auth-system",
+  "name": "resucraft-server",
   "version": "1.0.0",
   "description": "Production-ready authentication system",
   "main": "server.js",
