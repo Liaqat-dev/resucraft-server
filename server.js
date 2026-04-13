@@ -1,6 +1,9 @@
 import dns from 'node:dns';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
+import https from 'node:https';
+import http from 'node:http';
+
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import express from 'express';
@@ -69,6 +72,9 @@ app.use(cors({
     allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
 }));
 
+// Health check / keep-alive
+app.get('/api/ping', (req, res) => res.sendStatus(200));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/pdf', pdfRoutes);
@@ -104,4 +110,18 @@ app.use(globalErrorHandler);
 httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+
+    // Keep-alive ping for Render free tier (spins down after 15 min of inactivity)
+    if (process.env.RENDER_EXTERNAL_URL) {
+        const pingUrl = new URL('/api/ping', process.env.RENDER_EXTERNAL_URL);
+        const client = pingUrl.protocol === 'https:' ? https : http;
+        setInterval(() => {
+            client.get(pingUrl.toString(), (res) => {
+                console.log(`[keep-alive] ping → ${res.statusCode}`);
+            }).on('error', (err) => {
+                console.warn(`[keep-alive] ping failed: ${err.message}`);
+            });
+        }, 14 * 60 * 1000); // every 14 minutes
+        console.log(`[keep-alive] self-ping active → ${pingUrl}`);
+    }
 });
