@@ -26,6 +26,8 @@ import personalInfoRoutes from "#routes/personalInfoRoutes.js";
 import projectRoutes from "#routes/projectRoutes.js";
 import certificateRoutes from "#routes/certificateRoutes.js";
 import aiRoutes from "#routes/aiRoutes.js";
+import contactRoutes from "#routes/contactRoutes.js";
+import adminRoutes from "#routes/adminRoutes.js";
 import { handleInterviewSocket } from '#controllers/interviewController.js';
 
 dotenv.config();
@@ -47,9 +49,8 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
-    process.env.FRONTEND_URL,          // web client (e.g. http://localhost:5173)
+    process.env.FRONTEND_URL,
     'http://localhost:8081',            // Expo web / Metro bundler
-    'http://localhost:19006',           // Expo web (older)
     ...(process.env.MOBILE_ORIGINS     // comma-separated extra origins from .env
         ? process.env.MOBILE_ORIGINS.split(',').map(o => o.trim())
         : []),
@@ -87,6 +88,8 @@ app.use("/api/personal-info", personalInfoRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/admin", adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);
@@ -108,8 +111,8 @@ app.all('{*splat}', (req, res) => {
 })
 app.use(globalErrorHandler);
 httpServer.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
 
     // Keep-alive ping for Render free tier (spins down after 15 min of inactivity)
     if (process.env.RENDER_EXTERNAL_URL) {

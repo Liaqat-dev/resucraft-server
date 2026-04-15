@@ -74,6 +74,26 @@ export const optionalAuth = async (req, res, next) => {
 };
 
 /**
+ * Restrict access to users with specific roles
+ * Usage: requireRole('admin') or requireRole('admin', 'moderator')
+ */
+export const requireRole = (...roles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return next(new AppError('Not authorized', 401));
+        }
+
+        if (!roles.includes(req.user.role)) {
+            return next(
+                new AppError('You do not have permission to perform this action', 403)
+            );
+        }
+
+        next();
+    };
+};
+
+/**
  * Restrict to specific providers (e.g., only local or only google)
  */
 export const restrictToProvider = (...providers) => {

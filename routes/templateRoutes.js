@@ -11,8 +11,8 @@ import { protect, requireVerified } from '#middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/:id', getTemplate);
 router.get('/all', listAllTemplates);
+router.get('/:id', getTemplate);
 router.use(protect, requireVerified);
 
 router.post('/save', saveTemplate);

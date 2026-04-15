@@ -1,5 +1,12 @@
-import puppeteer    from "puppeteer-core";
+import puppeteer    from "puppeteer";
+import { existsSync } from "fs";
 import { mmToPx, nestedToFlat, renderSections, renderElement } from '#utils/transformUtils.js';
+
+function getExecutablePath() {
+    const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    if (envPath && existsSync(envPath)) return envPath;
+    return puppeteer.executablePath();
+}
 
 /**
  * Generate a PDF buffer from resume data.
@@ -94,9 +101,14 @@ export const generatePdfBuffer = async ({ elements, sections, canvasSize, margin
 `;
 
     const browser = await puppeteer.launch({
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable',
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        executablePath: getExecutablePath(),
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+        ]
     });
 
     const page = await browser.newPage();

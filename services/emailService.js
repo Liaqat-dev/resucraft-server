@@ -2,30 +2,76 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+// EMAIL_PROVIDER=gmail | resend  (default: gmail)
+const PROVIDER = (process.env.EMAIL_PROVIDER || 'gmail').toLowerCase();
+
+// ── Gmail (nodemailer) ────────────────────────────────────────────────────────
+let transporter = null;
+
+if (PROVIDER === 'gmail') {
+    console.log('[emailService] Provider: Gmail SMTP');
+    console.log('[emailService] EMAIL_USER set:', !!process.env.EMAIL_USER);
+    console.log('[emailService] EMAIL_PASS set:', !!process.env.EMAIL_PASS);
+
+    transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+        }
+    });
+
+    transporter.verify((error) => {
+        if (error) {
+            console.error('❌ Email service error:', error.message);
+        } else {
+            console.log('✅ Email service is ready (Gmail)');
+        }
+    });
+}
+
+// ── Resend ────────────────────────────────────────────────────────────────────
+let resend = null;
+
+if (PROVIDER === 'resend') {
+    console.log('[emailService] Provider: Resend');
+    console.log('[emailService] RESEND_API_KEY set:', !!process.env.RESEND_API_KEY);
+    resend = new Resend(process.env.RESEND_API_KEY);
+}
+
+// ── from address ──────────────────────────────────────────────────────────────
+const fromAddress = (name) => {
+    const appName = name || process.env.APP_NAME || 'Your App';
+    if (PROVIDER === 'resend') {
+        // Use EMAIL_FROM for Resend (must be a verified domain, e.g. noreply@yourdomain.com)
+        // Falls back to Resend's sandbox sender for testing
+        return `"${appName}" <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
     }
-});
+    return `"${appName}" <${process.env.EMAIL_USER}>`;
+};
 
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email service error:', error);
+// ── internal send helper ──────────────────────────────────────────────────────
+const sendMail = async ({ to, subject, html, fromName }) => {
+    if (PROVIDER === 'resend') {
+        const { error } = await resend.emails.send({
+            from: fromAddress(fromName),
+            to,
+            subject,
+            html
+        });
+        if (error) throw new Error(error.message);
     } else {
-        console.log('✅ Email service is ready');
+        await transporter.sendMail({ from: fromAddress(fromName), to, subject, html });
     }
-});
+};
 
-/**
- * Send verification email
- */
+// ── Exports ───────────────────────────────────────────────────────────────────
+
 export const sendVerificationEmail = async (email, code) => {
     try {
-        const mailOptions = {
-            from: `"${process.env.APP_NAME || 'Your App'}" <${process.env.EMAIL_USER}>`,
+        await sendMail({
             to: email,
             subject: 'Verify Your Email Address',
             html: `
@@ -60,10 +106,8 @@ export const sendVerificationEmail = async (email, code) => {
                 </body>
                 </html>
             `
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Verification email sent:', info.messageId);
+        });
+        console.log('✅ Verification email sent to:', email);
         return { success: true };
     } catch (error) {
         console.error('❌ Error sending verification email:', error);
@@ -71,15 +115,11 @@ export const sendVerificationEmail = async (email, code) => {
     }
 };
 
-/**
- * Send password reset email
- */
 export const sendPasswordResetEmail = async (email, token) => {
     try {
         const resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password/${token}`;
 
-        const mailOptions = {
-            from: `"${process.env.APP_NAME || 'Your App'}" <${process.env.EMAIL_USER}>`,
+        await sendMail({
             to: email,
             subject: 'Reset Your Password',
             html: `
@@ -121,10 +161,8 @@ export const sendPasswordResetEmail = async (email, token) => {
                 </body>
                 </html>
             `
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Password reset email sent:', info.messageId);
+        });
+        console.log('✅ Password reset email sent to:', email);
         return { success: true };
     } catch (error) {
         console.error('❌ Error sending password reset email:', error);
@@ -132,13 +170,9 @@ export const sendPasswordResetEmail = async (email, token) => {
     }
 };
 
-/**
- * Send welcome email
- */
 export const sendWelcomeEmail = async (email, name) => {
     try {
-        const mailOptions = {
-            from: `"${process.env.APP_NAME || 'Your App'}" <${process.env.EMAIL_USER}>`,
+        await sendMail({
             to: email,
             subject: `Welcome to ${process.env.APP_NAME || 'Our Platform'}!`,
             html: `
@@ -157,7 +191,7 @@ export const sendWelcomeEmail = async (email, name) => {
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1>Welcome Aboard! 🎉</h1>
+                            <h1>Welcome Aboard!</h1>
                         </div>
                         <div class="content">
                             <p>Hello ${name}!</p>
@@ -175,10 +209,8 @@ export const sendWelcomeEmail = async (email, name) => {
                 </body>
                 </html>
             `
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Welcome email sent:', info.messageId);
+        });
+        console.log('✅ Welcome email sent to:', email);
         return { success: true };
     } catch (error) {
         console.error('❌ Error sending welcome email:', error);
@@ -186,14 +218,51 @@ export const sendWelcomeEmail = async (email, name) => {
     }
 };
 
-/**
- * Send security alert email
- */
+export const sendContactNotificationEmail = async ({ name, email, topic, message }) => {
+    const adminEmail = process.env.CONTACT_NOTIFY_EMAIL || process.env.EMAIL_USER;
+    if (!adminEmail) return;
+    try {
+        await sendMail({
+            to: adminEmail,
+            subject: `[Contact] ${topic} — from ${name}`,
+            html: `
+                <!DOCTYPE html><html><head><style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #C09A3A; color: white; padding: 16px 20px; border-radius: 5px 5px 0 0; }
+                .content { background: #f9fafb; padding: 24px; border-radius: 0 0 5px 5px; }
+                .row { margin-bottom: 10px; }
+                .label { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; }
+                .value { margin-top: 2px; font-size: 14px; color: #111; }
+                .msg-box { background: white; border-left: 3px solid #C09A3A; padding: 12px 16px; border-radius: 0 4px 4px 0; margin-top: 16px; white-space: pre-wrap; font-size: 14px; }
+                .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #6b7280; }
+                </style></head><body>
+                <div class="container">
+                    <div class="header"><h2 style="margin:0">New Contact Message</h2></div>
+                    <div class="content">
+                        <div class="row"><div class="label">Name</div><div class="value">${name}</div></div>
+                        <div class="row"><div class="label">Email</div><div class="value">${email}</div></div>
+                        <div class="row"><div class="label">Topic</div><div class="value">${topic}</div></div>
+                        <div class="label">Message</div>
+                        <div class="msg-box">${message}</div>
+                    </div>
+                    <div class="footer">© ${new Date().getFullYear()} ${process.env.APP_NAME || 'ResuCraft'}</div>
+                </div>
+                </body></html>
+            `,
+        });
+        console.log('✅ Contact notification sent to admin:', adminEmail);
+    } catch (err) {
+        // Non-fatal — message is already saved to DB
+        console.error('❌ Contact notification email failed:', err.message);
+    }
+};
+
 export const sendSecurityAlertEmail = async (email, alertType, details) => {
     try {
-        const mailOptions = {
-            from: `"${process.env.APP_NAME || 'Your App'} Security" <${process.env.EMAIL_USER}>`,
+        await sendMail({
             to: email,
+            fromName: `${process.env.APP_NAME || 'Your App'} Security`,
             subject: `Security Alert: ${alertType}`,
             html: `
                 <!DOCTYPE html>
@@ -212,7 +281,7 @@ export const sendSecurityAlertEmail = async (email, alertType, details) => {
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1>🔒 Security Alert</h1>
+                            <h1>Security Alert</h1>
                         </div>
                         <div class="content">
                             <div class="alert-box">
@@ -221,8 +290,8 @@ export const sendSecurityAlertEmail = async (email, alertType, details) => {
                             <p>We detected unusual activity on your account:</p>
                             <div class="details">
                                 ${Object.entries(details).map(([key, value]) =>
-                `<p><strong>${key}:</strong> ${value}</p>`
-            ).join('')}
+                                    `<p><strong>${key}:</strong> ${value}</p>`
+                                ).join('')}
                             </div>
                             <p>If this was you, you can safely ignore this email. If you don't recognize this activity, please:</p>
                             <ul>
@@ -238,10 +307,8 @@ export const sendSecurityAlertEmail = async (email, alertType, details) => {
                 </body>
                 </html>
             `
-        };
-
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Security alert email sent:', info.messageId);
+        });
+        console.log('✅ Security alert email sent to:', email);
         return { success: true };
     } catch (error) {
         console.error('❌ Error sending security alert email:', error);

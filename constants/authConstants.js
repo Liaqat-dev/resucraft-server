@@ -1,3 +1,9 @@
+export const ROLES = {
+    USER: 'user',
+    MODERATOR: 'moderator',
+    ADMIN: 'admin',
+};
+
 export const AUTH_CONSTANTS = {
     // JWT Configuration
     JWT_EXPIRY: '15m',                    // Access token: 15 minutes

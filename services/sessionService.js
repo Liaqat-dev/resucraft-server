@@ -210,6 +210,16 @@ export const validateSession = async (accessToken) => {
         throw new AppError(ERROR_MESSAGES.USER_NOT_FOUND, 404);
     }
 
+    // Check suspension
+    if (user.isSuspended) {
+        throw new AppError(
+            user.suspendedReason
+                ? `Account suspended: ${user.suspendedReason}`
+                : 'Your account has been suspended. Please contact support.',
+            403
+        );
+    }
+
     // Update last activity
     await session.updateActivity();
 

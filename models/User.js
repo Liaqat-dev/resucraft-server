@@ -118,6 +118,24 @@ const userSchema = new mongoose.Schema(
             }
         },
 
+        // Role & Status
+        role: {
+            type: String,
+            enum: ['user', 'moderator', 'admin'],
+            default: 'user',
+            index: true,
+        },
+
+        isSuspended: {
+            type: Boolean,
+            default: false,
+        },
+
+        suspendedReason: {
+            type: String,
+            default: null,
+        },
+
         // Metadata
         lastLogin: Date,
         lastPasswordChange: Date,
