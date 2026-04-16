@@ -29,7 +29,7 @@ export const AUTH_CONSTANTS = {
     // Rate Limiting
     RATE_LIMIT: {
         LOGIN: {
-            WINDOW_MS: 15 * 60 * 1000,
+            WINDOW_MS: 5 * 60 * 1000,
             MAX_REQUESTS: 5
         },
         EMAIL: {

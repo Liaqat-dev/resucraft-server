@@ -107,7 +107,7 @@ export const listAllTemplates = async (req, res) => {
             });
         }
 
-        const templates = await Template.find()
+        const templates = await Template.find({ visibility: 'public' })
             .sort({ updatedAt: -1 })
             .limit(100);
 
