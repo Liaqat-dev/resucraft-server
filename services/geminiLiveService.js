@@ -39,11 +39,12 @@ function transcodeToRawPCM(base64Input) {
 const LIVE_MODEL = 'gemini-2.5-flash-native-audio-latest';
 
 export class GeminiLiveSession {
-    constructor({ apiKey, systemPrompt, onAudio, onText, onTurnComplete, onReady, onError, onClose }) {
+    constructor({ apiKey, systemPrompt, onAudio, onText, onUserText, onTurnComplete, onReady, onError, onClose }) {
         this.ai = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
         this.systemPrompt = systemPrompt;
         this.onAudio = onAudio;
         this.onText = onText;
+        this.onUserText = onUserText;
         this.onTurnComplete = onTurnComplete;
         this.onReady = onReady;
         this.onError = onError;
@@ -60,6 +61,7 @@ export class GeminiLiveSession {
                     systemInstruction: {
                         parts: [{ text: this.systemPrompt }],
                     },
+                    inputAudioTranscription: {},   // enables STT for candidate speech
                 },
                 callbacks: {
                     onopen: () => {
@@ -88,9 +90,14 @@ export class GeminiLiveSession {
                             }
                         }
 
-                        // Native audio model AI transcript
+                        // Native audio model AI transcript (AI speech → text)
                         if (sc.outputTranscription?.text) {
                             this.onText?.(sc.outputTranscription.text);
+                        }
+
+                        // Candidate speech → text (requires inputAudioTranscription in config)
+                        if (sc.inputTranscription?.text) {
+                            this.onUserText?.(sc.inputTranscription.text);
                         }
 
                         if (sc.turnComplete) {

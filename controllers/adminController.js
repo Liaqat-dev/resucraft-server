@@ -192,14 +192,14 @@ export const getTemplateStats = catchAsync(async (req, res) => {
         Template.aggregate([{ $group: { _id: '$visibility', count: { $sum: 1 } } }]),
     ]);
 
-    const status = { pending: 0, approved: 0, draft: 0 };
+    const status = { draft: 0, pending: 0, published: 0 };
     statusAgg.forEach(r => { if (r._id in status) status[r._id] = r.count; });
 
     const visibility = { public: 0, private: 0 };
     visibilityAgg.forEach(r => { if (r._id in visibility) visibility[r._id] = r.count; });
 
     res.json({
-        total: status.pending + status.approved + status.draft,
+        total: status.draft + status.pending + status.published,
         status,
         visibility,
     });
@@ -246,7 +246,7 @@ export const listAdminTemplates = catchAsync(async (req, res) => {
 export const approveTemplate = catchAsync(async (req, res) => {
     const template = await Template.findByIdAndUpdate(
         req.params.id,
-        { status: 'approved', visibility: 'public' },
+        { status: 'published', visibility: 'public' },
         { new: true }
     ).populate('userId', 'username email');
 

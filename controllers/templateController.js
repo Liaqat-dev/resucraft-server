@@ -59,6 +59,9 @@ export const getTemplate = async (req, res) => {
         res.json({
             id: template._id,
             name: template.name,
+            category: template.category,
+            visibility: template.visibility,
+            status: template.status,
             data: template.data,
             createdAt: template.createdAt,
             updatedAt: template.updatedAt
@@ -148,6 +151,43 @@ export const updateTemplate = async (req, res) => {
             error: 'Failed to update template',
             message: error.message
         });
+    }
+};
+
+export const publishTemplate = async (req, res) => {
+    try {
+        if (!checkDb(res)) return;
+
+        const existing = await Template.findOne(
+            { _id: req.params.id, userId: req.user._id },
+            { status: 1, visibility: 1 }
+        );
+
+        if (!existing) {
+            return res.status(404).json({ error: 'Template not found or access denied' });
+        }
+
+        if (existing.status === 'published') {
+            return res.status(400).json({ error: 'Template is already published' });
+        }
+
+        const template = await Template.findByIdAndUpdate(
+            req.params.id,
+            { status: 'pending', visibility: 'private', updatedAt: new Date() },
+            { new: true, runValidators: true }
+        );
+
+        console.log(`Template submitted for review: ${req.params.id}`);
+
+        res.json({
+            success: true,
+            id: template._id,
+            status: template.status,
+            message: 'Template submitted for review'
+        });
+    } catch (error) {
+        console.error('Publish Template Error:', error);
+        res.status(500).json({ error: 'Failed to publish template', message: error.message });
     }
 };
 

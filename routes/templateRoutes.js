@@ -5,7 +5,8 @@ import {
     listTemplates,
     listAllTemplates,
     updateTemplate,
-    deleteTemplate
+    deleteTemplate,
+    publishTemplate
 } from '#controllers/templateController.js';
 import { protect, requireVerified } from '#middlewares/authMiddleware.js';
 
@@ -17,6 +18,7 @@ router.use(protect, requireVerified);
 
 router.post('/save', saveTemplate);
 router.get('/', listTemplates);
+router.put('/:id/publish', publishTemplate);
 router.put('/:id', updateTemplate);
 router.delete('/:id', deleteTemplate);
 

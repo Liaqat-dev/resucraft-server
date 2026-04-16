@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const CATEGORIES = ['Modern', 'Classic', 'Creative', 'Minimal', 'Professional', 'Other'];
 const VISIBILITY = ['public', 'private'];
-const STATUS = ['pending', 'approved', 'draft'];
+const STATUS = ['draft', 'pending', 'published'];
 
 const templateSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
