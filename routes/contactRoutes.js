@@ -7,6 +7,7 @@ import {
     updateContactStatus,
     deleteContactMessage,
     getContactStats,
+    replyToContact,
 } from '#controllers/contactController.js';
 
 const router = express.Router();
@@ -22,11 +23,12 @@ const contactLimiter = rateLimit({
 // ── Public ────────────────────────────────────────────────────────────────────
 router.post('/send', contactLimiter, submitContact);
 
-// ── Admin (protect middleware will be applied here when admin panel is ready) ─
+// ── Admin ─────────────────────────────────────────────────────────────────────
 router.get('/stats', getContactStats);
 router.get('/', getContactMessages);
 router.get('/:id', getContactMessage);
 router.patch('/:id/status', updateContactStatus);
+router.post('/:id/reply', replyToContact);
 router.delete('/:id', deleteContactMessage);
 
 export default router;

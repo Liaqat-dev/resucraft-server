@@ -258,6 +258,53 @@ export const sendContactNotificationEmail = async ({ name, email, topic, message
     }
 };
 
+export const sendContactReplyEmail = async ({ toName, toEmail, originalMessage, replyText, topic }) => {
+    try {
+        await sendMail({
+            to: toEmail,
+            subject: `Re: ${topic} — ResuCraft Support`,
+            html: `
+                <!DOCTYPE html><html><head><style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #1a1f2e 0%, #2d3748 100%); color: white; padding: 24px 28px; border-radius: 12px 12px 0 0; }
+                .header h2 { margin: 0 0 4px; font-size: 20px; }
+                .header p { margin: 0; font-size: 13px; opacity: 0.65; }
+                .content { background: #f8fafc; padding: 28px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none; }
+                .reply-box { background: white; border-left: 4px solid #C09A3A; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0; font-size: 15px; white-space: pre-wrap; line-height: 1.7; }
+                .original { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+                .original-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px; }
+                .original-text { font-size: 13px; color: #64748b; white-space: pre-wrap; background: #f1f5f9; padding: 12px 16px; border-radius: 6px; }
+                .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #94a3b8; }
+                </style></head><body>
+                <div class="container">
+                    <div class="header">
+                        <h2>ResuCraft Support</h2>
+                        <p>We've replied to your inquiry</p>
+                    </div>
+                    <div class="content">
+                        <p style="margin-top:0">Hi <strong>${toName}</strong>,</p>
+                        <p>Thank you for reaching out. Here's our response to your <strong>${topic}</strong> inquiry:</p>
+                        <div class="reply-box">${replyText}</div>
+                        <p style="font-size:13px;color:#64748b">If you have any further questions, don't hesitate to <a href="${process.env.FRONTEND_URL || '#'}/contact" style="color:#C09A3A">contact us again</a>.</p>
+                        <div class="original">
+                            <div class="original-label">Your original message</div>
+                            <div class="original-text">${originalMessage}</div>
+                        </div>
+                    </div>
+                    <div class="footer">© ${new Date().getFullYear()} ${process.env.APP_NAME || 'ResuCraft'}. All rights reserved.</div>
+                </div>
+                </body></html>
+            `,
+        });
+        console.log('✅ Contact reply email sent to:', toEmail);
+        return { success: true };
+    } catch (error) {
+        console.error('❌ Error sending contact reply email:', error);
+        throw error;
+    }
+};
+
 export const sendSecurityAlertEmail = async (email, alertType, details) => {
     try {
         await sendMail({

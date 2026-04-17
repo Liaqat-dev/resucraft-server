@@ -1,5 +1,5 @@
 import ContactMessage from '#models/contactMessage.js';
-import { sendContactNotificationEmail } from '#services/emailService.js';
+import { sendContactNotificationEmail, sendContactReplyEmail } from '#services/emailService.js';
 import catchAsync from '#utils/catchAsync.js';
 import { AppError } from '#middlewares/errorHandler.js';
 
@@ -27,7 +27,21 @@ export const submitContact = catchAsync(async (req, res) => {
     });
 });
 
-// ── Admin (consumed by admin panel later) ────────────────────────────────────
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/contact/stats
+ * Quick unread / total counts for admin dashboard widget.
+ */
+export const getContactStats = catchAsync(async (req, res) => {
+    const [total, unread, replied, archived] = await Promise.all([
+        ContactMessage.countDocuments(),
+        ContactMessage.countDocuments({ status: 'unread' }),
+        ContactMessage.countDocuments({ status: 'replied' }),
+        ContactMessage.countDocuments({ status: 'archived' }),
+    ]);
+    res.json({ total, unread, replied, archived });
+});
 
 /**
  * GET /api/contact
@@ -93,23 +107,37 @@ export const updateContactStatus = catchAsync(async (req, res) => {
 });
 
 /**
+ * POST /api/contact/:id/reply
+ * Send a reply email to the user and mark the message as replied.
+ */
+export const replyToContact = catchAsync(async (req, res) => {
+    const { replyText } = req.body;
+    if (!replyText || !replyText.trim()) {
+        throw new AppError('Reply text is required.', 400);
+    }
+
+    const contact = await ContactMessage.findById(req.params.id);
+    if (!contact) throw new AppError('Message not found.', 404);
+
+    await sendContactReplyEmail({
+        toName: contact.name,
+        toEmail: contact.email,
+        originalMessage: contact.message,
+        replyText: replyText.trim(),
+        topic: contact.topic,
+    });
+
+    contact.status = 'replied';
+    await contact.save();
+
+    res.json({ message: 'Reply sent successfully.', contact });
+});
+
+/**
  * DELETE /api/contact/:id
  */
 export const deleteContactMessage = catchAsync(async (req, res) => {
     const contact = await ContactMessage.findByIdAndDelete(req.params.id);
     if (!contact) throw new AppError('Message not found.', 404);
     res.json({ message: 'Message deleted.' });
-});
-
-/**
- * GET /api/contact/stats
- * Quick unread / total counts for admin dashboard widget.
- */
-export const getContactStats = catchAsync(async (req, res) => {
-    const [total, unread, replied] = await Promise.all([
-        ContactMessage.countDocuments(),
-        ContactMessage.countDocuments({ status: 'unread' }),
-        ContactMessage.countDocuments({ status: 'replied' }),
-    ]);
-    res.json({ total, unread, replied });
 });
