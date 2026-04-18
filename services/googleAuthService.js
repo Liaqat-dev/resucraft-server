@@ -30,14 +30,7 @@ export const googleAuthService = async (googleAccessToken, req) => {
         let user = await User.findOne({ email: googleUser.email.toLowerCase() });
 
         if (user) {
-            // User exists
-            if (user.provider === 'local') {
-                throw new AppError(
-                    'An account with this email already exists. Please log in with email and password.',
-                    409
-                );
-            }
-
+            // User exists — allow login regardless of provider (Google token already verified)
             // Update last login
             user.lastLogin = new Date();
             await user.save();
