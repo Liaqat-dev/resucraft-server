@@ -26,10 +26,6 @@ export const createSession = async ({ userId, req, tokens = null }) => {
     const deviceId = generateDeviceId(userAgent, ipAddress);
     const deviceInfo = parseUserAgent(userAgent);
 
-    console.log('Creating/updating session with IP:', ipAddress);
-    console.log('Device ID:', deviceId);
-
-    // ✅ Check if session already exists for this device
     const existingSession = await Session.findOne({
         user: userId,
         deviceId: deviceId,
@@ -37,7 +33,6 @@ export const createSession = async ({ userId, req, tokens = null }) => {
     });
 
     if (existingSession) {
-        console.log('✅ Device recognized! Updating existing session:', existingSession._id);
 
         // Generate new tokens
         const { accessToken, refreshToken } = tokens || generateTokenPair(userId);
@@ -59,12 +54,6 @@ export const createSession = async ({ userId, req, tokens = null }) => {
 
         await existingSession.save();
 
-        console.log('✅ Session updated:', {
-            sessionId: existingSession._id,
-            ipAddress: existingSession.ipAddress,
-            deviceName: existingSession.deviceName,
-            expiresAt: existingSession.expiresAt
-        });
 
         return {
             session: existingSession,
@@ -72,9 +61,6 @@ export const createSession = async ({ userId, req, tokens = null }) => {
             refreshToken
         };
     }
-
-    // No existing session - create new one
-    console.log('🆕 New device detected, creating new session');
 
     // Generate tokens if not provided
     const { accessToken, refreshToken } = tokens || generateTokenPair(userId);
@@ -115,14 +101,6 @@ export const createSession = async ({ userId, req, tokens = null }) => {
         lastActivity: new Date()
     });
 
-    console.log('✅ New session created:', {
-        sessionId: session._id,
-        ipAddress: session.ipAddress,
-        deviceName: session.deviceName,
-        location: location,
-        expiresAt: session.expiresAt
-    });
-
     return {
         session,
         accessToken,
@@ -150,14 +128,12 @@ const getLocationFromIP = async (ipAddress) => {
         });
 
         if (!response.ok) {
-            console.log('⚠️  IP geolocation failed:', response.status);
             return null;
         }
 
         const data = await response.json();
 
         if (data.error) {
-            console.log('⚠️  IP geolocation error:', data.reason);
             return null;
         }
 
@@ -231,11 +207,7 @@ export const validateSession = async (accessToken) => {
  * This extends the session indefinitely as long as user keeps refreshing
  */
 export const refreshAccessToken = async (refreshToken, req) => {
-    console.log('\n🔄 ========== TOKEN REFRESH START ==========');
-    console.log('Refresh token received:', refreshToken ? refreshToken.substring(0, 20) + '...' : 'MISSING');
-
     if (!refreshToken) {
-        console.error('❌ No refresh token provided');
         throw new AppError('Refresh token is required', 400);
     }
 
@@ -243,9 +215,6 @@ export const refreshAccessToken = async (refreshToken, req) => {
     let decoded;
     try {
         decoded = verifyRefreshToken(refreshToken);
-        console.log('✅ Refresh token verified');
-        console.log('   - User ID:', decoded.id);
-        console.log('   - Token type:', decoded.type);
     } catch (error) {
         console.error('❌ Refresh token verification failed:', error.message);
         throw new AppError(error.message, 401);
@@ -261,16 +230,10 @@ export const refreshAccessToken = async (refreshToken, req) => {
     console.log('Session query result:', session ? 'FOUND' : 'NOT FOUND');
 
     if (!session) {
-        console.error('❌ Session not found with this refresh token');
-        console.log('   Token claims user ID:', decoded.id);
 
         // Check if session exists with different user
         const sessionByToken = await Session.findOne({ refreshToken });
         if (sessionByToken) {
-            console.error('⚠️⚠️⚠️ SESSION EXISTS BUT USER ID MISMATCH!');
-            console.log('   Session user ID:', sessionByToken.user);
-            console.log('   Token user ID:', decoded.id);
-            console.log('   Session is active:', sessionByToken.isActive);
             throw new AppError('Token/Session user mismatch. Please log in again.', 401);
         }
 
@@ -296,50 +259,22 @@ export const refreshAccessToken = async (refreshToken, req) => {
 
     // Verify session belongs to the user in the token
     if (session.user.toString() !== decoded.id.toString()) {
-        console.error('❌ Session user ID does not match token user ID');
-        console.log('   Session user:', session.user);
-        console.log('   Token user:', decoded.id);
         throw new AppError('Invalid session. Please log in again.', 401);
     }
-
-    console.log('✅ Session found:');
-    console.log('   - Session ID:', session._id);
-    console.log('   - User ID:', session.user);
-    console.log('   - Is Active:', session.isActive);
-    console.log('   - Expires At:', session.expiresAt);
-    console.log('   - Current Time:', new Date());
-    console.log('   - Is Expired:', session.expiresAt < new Date());
-    console.log('   - Last Activity:', session.lastActivity);
 
     // Generate NEW tokens
     const newAccessToken = generateAccessToken(decoded.id);
     const newRefreshToken = generateRefreshToken(decoded.id);
 
-    console.log('✅ New tokens generated');
-    console.log('   - New Access Token:', newAccessToken.substring(0, 20) + '...');
-    console.log('   - New Refresh Token:', newRefreshToken.substring(0, 20) + '...');
-
     // Update session with new tokens
     const ipAddress = getClientIp(req);
-    const oldAccessToken = session.accessToken;
-    const oldRefreshToken = session.refreshToken;
-
     session.accessToken = newAccessToken;
     session.refreshToken = newRefreshToken;
     session.lastActivity = new Date();
     session.ipAddress = ipAddress || session.ipAddress;
     session.expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
-    console.log('💾 Saving session updates...');
-    console.log('   - Old Access Token:', oldAccessToken.substring(0, 20) + '...');
-    console.log('   - New Access Token:', session.accessToken.substring(0, 20) + '...');
-    console.log('   - Old Refresh Token:', oldRefreshToken.substring(0, 20) + '...');
-    console.log('   - New Refresh Token:', session.refreshToken.substring(0, 20) + '...');
-
     await session.save();
-
-    console.log('✅ Session saved successfully');
-    console.log('   - New Expires At:', session.expiresAt);
 
     // Log token refresh
     try {
@@ -350,12 +285,9 @@ export const refreshAccessToken = async (refreshToken, req) => {
             req,
             metadata: { sessionId: session._id }
         });
-        console.log('✅ Token refresh logged to audit');
     } catch (logError) {
-        console.error('⚠️  Failed to log token refresh:', logError.message);
+        console.error('⚠Failed to log token refresh:', logError.message);
     }
-
-    console.log('🎉 ========== TOKEN REFRESH SUCCESS ==========\n');
 
     return {
         accessToken: newAccessToken,

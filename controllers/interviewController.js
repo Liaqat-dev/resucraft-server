@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { GoogleGenAI } from '@google/genai';
 import { GeminiLiveSession } from '#services/geminiLiveService.js';
 
-const FEEDBACK_MODEL = 'gemini-2.0-flash';
+const FEEDBACK_MODEL = 'gemini-2.5-flash';
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 

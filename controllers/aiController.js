@@ -5,11 +5,13 @@ import Skill from '#models/skills.js';
 import Project from '#models/project.js';
 import Certificate from '#models/certificate.js';
 import Template from '#models/Template.js';
-import { generateTailoredResume } from '#services/aiResumeService.js';
-import { AppError } from '#middlewares/errorHandler.js';
+import {generateTailoredResume} from '#services/aiResumeService.js';
+import {AppError} from '#middlewares/errorHandler.js';
+import Resume from "#models/Resume.js";
+
 export const generateResume = async (req, res, next) => {
     try {
-        const { templateId, jobDescription } = req.body;
+        const {templateId, jobDescription} = req.body;
 
         if (!templateId || !jobDescription) {
             throw new AppError('templateId and jobDescription are required', 400);
@@ -23,22 +25,29 @@ export const generateResume = async (req, res, next) => {
         const [template, personalInfo, education, experience, skills, projects, certificates] =
             await Promise.all([
                 Template.findById(templateId),
-                PersonalInfo.findOne({ userId }),
-                Education.find({ user: userId }),
-                Experience.find({ user: userId }),
-                Skill.find({ user: userId }),
-                Project.find({ user: userId }),
-                Certificate.find({ user: userId }),
+                PersonalInfo.findOne({userId}),
+                Education.find({user: userId}),
+                Experience.find({user: userId}),
+                Skill.find({user: userId}),
+                Project.find({user: userId}),
+                Certificate.find({user: userId}),
             ]);
 
         if (!template) {
             throw new AppError('Template not found', 404);
         }
 
-        const profile = { personalInfo, education, experience, skills, projects, certificates };
+        const profile = {personalInfo, education, experience, skills, projects, certificates};
         const filledData = await generateTailoredResume(template.data, jobDescription, profile);
+        const resume = await Resume.create({
+            userId:userId,
+            name: `${req.user.username}-${Date.now()}`,
+            category:template.category,
+            data:filledData
+        });
 
         res.json({
+            resume:resume,
             success: true,
             filledTemplate: {
                 _id: template._id,

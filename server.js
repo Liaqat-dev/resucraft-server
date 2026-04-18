@@ -4,6 +4,8 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 import https from 'node:https';
 import http from 'node:http';
 
+import morgan from 'morgan';
+
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import express from 'express';
@@ -28,6 +30,8 @@ import certificateRoutes from "#routes/certificateRoutes.js";
 import aiRoutes from "#routes/aiRoutes.js";
 import contactRoutes from "#routes/contactRoutes.js";
 import adminRoutes from "#routes/adminRoutes.js";
+import resumeRoutes from "#routes/resumeRoutes.js";
+import reviewRoutes from "#routes/reviewRoutes.js";
 import { handleInterviewSocket } from '#controllers/interviewController.js';
 
 dotenv.config();
@@ -39,6 +43,7 @@ connectDB().catch(err => {
 
 
 const app = express();
+app.use(morgan('dev'));
 
 // Middleware
 app.use(express.json());
@@ -90,6 +95,8 @@ app.use("/api/certificates", certificateRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/resumes", resumeRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);

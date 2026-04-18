@@ -75,7 +75,7 @@ export const login = catchAsync(async (req, res) => {
         return res.status(200).json(data);
     }
 
-    // ✅ CLEAR ALL OLD COOKIES FIRST
+    //  CLEAR ALL OLD COOKIES FIRST
     res.clearCookie('token', {path: '/'});
     res.clearCookie('refreshToken', {path: '/'});
     res.clearCookie('refreshToken', {path: '/api/auth/refresh'});
@@ -86,28 +86,25 @@ export const login = catchAsync(async (req, res) => {
         req
     });
 
-    // ✅ Set ONLY refresh token in HttpOnly cookie
+    //  Set ONLY refresh token in HttpOnly cookie
     res.cookie('refreshToken', refreshToken, AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE_OPTIONS);
 
     // Log successful login
     await logLogin(data._id, req);
 
-    // const profilePic = await getProfilePic(data._id);
-
-    // ✅ Send access token in response body
+    //  Send access token in response body
     return res.json({
         accessToken,
-        user: {
-            _id: data._id,
-            name: data.name,
-            username: data.username,
-            profilePic: data.profilePic,
-            email: data.email,
-            isVerified: data.isVerified,
-            provider: data.provider || 'local',
-            twoFactorEnabled: data.twoFactorEnabled || false,
-
-        }
+        _id: data._id,
+        name: data.name,
+        username: data.username,
+        profilePic: data.profilePic,
+        email: data.email,
+        isVerified: data.isVerified,
+        provider: data.provider || 'local',
+        twoFactorEnabled: data.twoFactorEnabled || false,
+        role: data.role,
+        isSuspended: data.isSuspended || false,
     });
 });
 /**
@@ -124,10 +121,7 @@ export const googleAuth = catchAsync(async (req, res) => {
         req
     });
 
-    // ❌ REMOVE THIS LINE
-    // res.cookie('token', accessToken, AUTH_CONSTANTS.COOKIE_OPTIONS);
 
-    // ✅ ONLY refresh token in cookie
     res.cookie('refreshToken', refreshToken, AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE_OPTIONS);
 
     // Log successful login
@@ -135,7 +129,6 @@ export const googleAuth = catchAsync(async (req, res) => {
 
     const profilePic = await getProfilePic(user._id);
 
-    // ✅ Send access token in response body
     return res.json({
         accessToken,  // Client stores in memory
         user: {
@@ -145,7 +138,10 @@ export const googleAuth = catchAsync(async (req, res) => {
             email: user.email,
             isVerified: user.isVerified,
             provider: 'google',
-            profilePic
+            profilePic,
+            role: user.role,
+            isSuspended: user.isSuspended || false,
+            twoFactorEnabled: user.twoFactorEnabled || false,
         }
     });
 });
@@ -161,10 +157,7 @@ export const profile = catchAsync(async (req, res) => {
  * Refresh access token
  */
 export const refresh = catchAsync(async (req, res) => {
-    console.log('\n🍪 ========== REFRESH REQUEST ==========');
-    console.log('All cookies received:', Object.keys(req.cookies));
 
-    // ✅ Check which refresh token we're getting
     const allRefreshTokens = [];
     for (const [key, value] of Object.entries(req.cookies)) {
         if (key === 'refreshToken') {
@@ -192,19 +185,11 @@ export const refresh = catchAsync(async (req, res) => {
         refreshToken: newRefreshToken
     } = await refreshAccessToken(refreshToken, req);
 
-    console.log('✅ Tokens refreshed, updating cookie...');
-
-    // ✅ Clear any old cookies first
     res.clearCookie('token', {path: '/'});
     res.clearCookie('refreshToken', {path: '/api/auth/refresh'});
 
-    // ✅ Set new refresh token cookie
     res.cookie('refreshToken', newRefreshToken, AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE_OPTIONS);
 
-    console.log('✅ Cookie set, sending response');
-    console.log('========== REFRESH COMPLETE ==========\n');
-
-    // ✅ Send access token in response body only
     res.json({
         accessToken: newAccessToken,
         message: 'Token refreshed successfully'
