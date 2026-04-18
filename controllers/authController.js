@@ -127,8 +127,6 @@ export const googleAuth = catchAsync(async (req, res) => {
     // Log successful login
     await logLogin(user._id, req);
 
-    const profilePic = await getProfilePic(user._id);
-
     return res.json({
         accessToken,  // Client stores in memory
         user: {
@@ -138,7 +136,7 @@ export const googleAuth = catchAsync(async (req, res) => {
             email: user.email,
             isVerified: user.isVerified,
             provider: 'google',
-            profilePic,
+            profilePic: user.profilePic || '',
             role: user.role,
             isSuspended: user.isSuspended || false,
             twoFactorEnabled: user.twoFactorEnabled || false,
