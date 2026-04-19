@@ -61,6 +61,76 @@ export const nestedToFlat = (nestedData) => {
  * Render a single element to an HTML string.
  */
 export const renderElement = (el) => {
+    // ── Bullets ──
+    if (el.type === 'bullets') {
+        const items = el.bulletItems || [];
+        const columns = el.columns || 1;
+        const bulletStyle = el.bulletStyle || 'disc';
+
+        const toRoman = (n) => {
+            const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+            const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+            let r = '';
+            vals.forEach((v, i) => { while (n >= v) { r += syms[i]; n -= v; } });
+            return r.toLowerCase();
+        };
+
+        const getMarker = (style, index) => {
+            switch (style) {
+                case 'disc':     return '&bull;';
+                case 'circle':   return '&#9675;';
+                case 'square':   return '&#9632;';
+                case 'dash':     return '&ndash;';
+                case 'numbered': return `${index + 1}.`;
+                case 'roman':    return `${toRoman(index + 1)}.`;
+                case 'none':     return '';
+                default:         return '&bull;';
+            }
+        };
+
+        const wrapperStyle = `
+            position: absolute;
+            left: ${el.x}px;
+            top: ${el.y}px;
+            width: ${el.width}px;
+            height: ${el.height}px;
+            overflow: hidden;
+            box-sizing: border-box;
+        `;
+
+        const gridStyle = `
+            display: grid;
+            grid-template-columns: repeat(${columns}, 1fr);
+            gap: 3px 12px;
+            width: 100%;
+        `;
+
+        const itemStyle = `
+            display: flex;
+            align-items: flex-start;
+            gap: 5px;
+            font-size: ${el.fontSize || 12}px;
+            font-weight: ${el.fontWeight || 'normal'};
+            font-family: ${el.fontFamily || 'Arial'}, sans-serif;
+            color: ${el.color || '#000000'};
+            line-height: ${el.lineHeight || 1.5};
+            word-break: break-word;
+        `;
+
+        const itemsHtml = items.map((item, i) => `
+            <div style="${itemStyle}">
+                <span style="flex-shrink:0;min-width:14px;margin-top:1px;">${getMarker(bulletStyle, i)}</span>
+                <span>${item || ''}</span>
+            </div>
+        `).join('');
+
+        return `
+            <div class="element bullets" style="${wrapperStyle}">
+                <div style="${gridStyle}">${itemsHtml}</div>
+            </div>
+        `;
+    }
+
     // ── Line Break ──
     if (el.type === 'line-break') {
         const thickness = el.lineBreakThickness || 1;

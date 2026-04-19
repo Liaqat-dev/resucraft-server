@@ -5,32 +5,38 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 /**
  * Walk template data and collect all text element contents with unique path keys.
  * Keys encode the location so we can write values back precisely.
+ *
+ * - Normal text/list-item elements → key: string value
+ * - Bullets elements               → key ending in "__bullets": array of strings
  */
 function extractTextFields(templateData) {
     const fields = {};
     const { elements = [], sections = [] } = templateData;
 
-    // Top-level elements (not inside any section)
-    elements.forEach((el, eIdx) => {
-        if (el.type !== 'line-break' && el.content && String(el.content).trim()) {
-            fields[`el__${eIdx}`] = String(el.content);
+    const addElement = (el, keyPrefix) => {
+        if (el.type === 'line-break') return;
+        if (el.type === 'bullets') {
+            if (el.bulletItems && el.bulletItems.length > 0) {
+                fields[`${keyPrefix}__bullets`] = el.bulletItems;
+            }
+        } else if (el.content && String(el.content).trim()) {
+            fields[keyPrefix] = String(el.content);
         }
-    });
+    };
+
+    // Top-level elements (not inside any section)
+    elements.forEach((el, eIdx) => addElement(el, `el__${eIdx}`));
 
     // Section elements and sub-section elements
     sections.forEach((section, sIdx) => {
-        (section.elements || []).forEach((el, eIdx) => {
-            if (el.type !== 'line-break' && el.content && String(el.content).trim()) {
-                fields[`sec${sIdx}_el${eIdx}`] = String(el.content);
-            }
-        });
+        (section.elements || []).forEach((el, eIdx) =>
+            addElement(el, `sec${sIdx}_el${eIdx}`)
+        );
 
         (section['sub-sections'] || []).forEach((ss, ssIdx) => {
-            (ss.elements || []).forEach((el, eIdx) => {
-                if (el.type !== 'line-break' && el.content && String(el.content).trim()) {
-                    fields[`sec${sIdx}_ss${ssIdx}_el${eIdx}`] = String(el.content);
-                }
-            });
+            (ss.elements || []).forEach((el, eIdx) =>
+                addElement(el, `sec${sIdx}_ss${ssIdx}_el${eIdx}`)
+            );
         });
     });
 
@@ -39,27 +45,33 @@ function extractTextFields(templateData) {
 
 /**
  * Apply a map of { pathKey: newValue } back into a deep-cloned templateData.
+ * Handles both plain string fields and bullets arrays (keys ending in "__bullets").
  */
 function applyFieldValues(templateData, values) {
     const data = JSON.parse(JSON.stringify(templateData));
     const { elements = [], sections = [] } = data;
 
-    elements.forEach((el, eIdx) => {
-        const v = values[`el__${eIdx}`];
-        if (v !== undefined) el.content = v;
-    });
+    const applyElement = (el, keyPrefix) => {
+        if (el.type === 'bullets') {
+            const v = values[`${keyPrefix}__bullets`];
+            if (Array.isArray(v) && v.length > 0) el.bulletItems = v;
+        } else {
+            const v = values[keyPrefix];
+            if (v !== undefined) el.content = v;
+        }
+    };
+
+    elements.forEach((el, eIdx) => applyElement(el, `el__${eIdx}`));
 
     sections.forEach((section, sIdx) => {
-        (section.elements || []).forEach((el, eIdx) => {
-            const v = values[`sec${sIdx}_el${eIdx}`];
-            if (v !== undefined) el.content = v;
-        });
+        (section.elements || []).forEach((el, eIdx) =>
+            applyElement(el, `sec${sIdx}_el${eIdx}`)
+        );
 
         (section['sub-sections'] || []).forEach((ss, ssIdx) => {
-            (ss.elements || []).forEach((el, eIdx) => {
-                const v = values[`sec${sIdx}_ss${ssIdx}_el${eIdx}`];
-                if (v !== undefined) el.content = v;
-            });
+            (ss.elements || []).forEach((el, eIdx) =>
+                applyElement(el, `sec${sIdx}_ss${ssIdx}_el${eIdx}`)
+            );
         });
     });
 
@@ -136,7 +148,14 @@ Return ONLY a valid JSON object with the SAME keys. Replace each value with tail
 - Uses strong, professional language
 - Keeps each field roughly the same length as the placeholder
 - Does NOT invent qualifications not in the profile
-- Returns ONLY the JSON object — no markdown, no code fences, no explanation`;
+- Returns ONLY the JSON object — no markdown, no code fences, no explanation
+
+### Special rule for keys ending in "__bullets"
+These fields represent bullet-point lists. Their current value is an array of strings.
+- Return the value as a JSON **array of strings** (same format)
+- Keep roughly the same number of items as the placeholder, or add more if the profile warrants it
+- Each item should be a concise, action-oriented bullet point relevant to the candidate's profile and job description
+- Example: ["Led cross-functional team of 8 engineers", "Reduced API latency by 40% via caching"]`;
 }
 
 /**
