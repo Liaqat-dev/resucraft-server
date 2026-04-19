@@ -270,6 +270,29 @@ export const rejectTemplate = catchAsync(async (req, res) => {
 });
 
 /**
+ * PATCH /api/admin/templates/:id/unpublish
+ * Unpublish a published template — sets status to draft or pending (admin + moderator)
+ */
+export const unpublishTemplate = catchAsync(async (req, res) => {
+    const { targetStatus = 'draft' } = req.body;
+
+    if (!['draft', 'pending'].includes(targetStatus)) {
+        throw new AppError('targetStatus must be "draft" or "pending"', 400);
+    }
+
+    const template = await Template.findByIdAndUpdate(
+        req.params.id,
+        { status: targetStatus, visibility: 'private' },
+        { new: true }
+    ).populate('userId', 'username email');
+
+    if (!template) throw new AppError('Template not found', 404);
+
+    const label = targetStatus === 'pending' ? 'moved back to pending review' : 'unpublished (draft)';
+    res.json({ message: `"${template.name}" ${label}`, template });
+});
+
+/**
  * DELETE /api/admin/templates/:id
  * Permanently delete any template (admin only)
  */

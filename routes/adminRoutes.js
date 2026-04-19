@@ -12,6 +12,7 @@ import {
     listAdminTemplates,
     approveTemplate,
     rejectTemplate,
+    unpublishTemplate,
     deleteAdminTemplate,
 } from '#controllers/adminController.js';
 
@@ -42,11 +43,12 @@ router.delete('/users/:id', requireRole('admin'), deleteUser);
 router.get('/templates/stats',          requireRole('admin', 'moderator'), getTemplateStats);
 router.get('/templates',                requireRole('admin', 'moderator'), listAdminTemplates);
 
-// Approve / reject — admin + moderator
-router.patch('/templates/:id/approve',  requireRole('admin', 'moderator'), approveTemplate);
-router.patch('/templates/:id/reject',   requireRole('admin', 'moderator'), rejectTemplate);
+// Approve / reject / unpublish — admin + moderator
+router.patch('/templates/:id/approve',    requireRole('admin', 'moderator'), approveTemplate);
+router.patch('/templates/:id/reject',     requireRole('admin', 'moderator'), rejectTemplate);
+router.patch('/templates/:id/unpublish', requireRole('admin', 'moderator'), unpublishTemplate);
 
 // Delete — admin only
-router.delete('/templates/:id',         requireRole('admin'), deleteAdminTemplate);
+router.delete('/templates/:id',           requireRole('admin'), deleteAdminTemplate);
 
 export default router;
