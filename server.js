@@ -32,6 +32,7 @@ import contactRoutes from "#routes/contactRoutes.js";
 import adminRoutes from "#routes/adminRoutes.js";
 import resumeRoutes from "#routes/resumeRoutes.js";
 import reviewRoutes from "#routes/reviewRoutes.js";
+import atsRoutes from "#routes/atsRoutes.js";
 import { handleInterviewSocket } from '#controllers/interviewController.js';
 
 dotenv.config();
@@ -97,6 +98,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/resumes", resumeRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/ats-score", atsRoutes);
 
 const PORT = process.env.PORT || 5000;
 const httpServer = createServer(app);

@@ -41,6 +41,7 @@ export const generateResume = async (req, res, next) => {
         const filledData = await generateTailoredResume(template.data, jobDescription, profile);
         const resume = await Resume.create({
             userId:userId,
+
             name: `${req.user.username}-${Date.now()}`,
             category:template.category,
             data:filledData
