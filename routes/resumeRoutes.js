@@ -10,12 +10,12 @@ import {
 
 const router = express.Router();
 
-router.use(protect);
+// router.use(protect);
 
-router.get('/', getAllResumes);
-router.post('/', createResume);
+router.get('/',protect, getAllResumes);
+router.post('/',protect, createResume);
 router.get('/:id', getResume);
-router.put('/:id', updateResume);
-router.delete('/:id', deleteResume);
+router.put('/:id',protect, updateResume);
+router.delete('/:id',protect, deleteResume);
 
 export default router;

@@ -24,7 +24,7 @@ const personalInfoSchema = new mongoose.Schema(
         email: {
             type: String,
             required: [true, 'Email is required'],
-            // unique: [true, 'Profile with this email already exists'],
+            unique: [true, 'Profile with this email already exists'],
         },
         dob: Date,
         bio: String,
