@@ -33,7 +33,7 @@ export const getAllResumes = async (req, res, next) => {
 
 export const getResume = async (req, res, next) => {
     try {
-        const resume = await Resume.findOne({ _id: req.params.id, userId: req.user._id });
+        const resume = await Resume.findOne({ _id: req.params.id });
 
         if (!resume) throw new AppError('Resume not found', 404);
 
