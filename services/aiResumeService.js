@@ -19,9 +19,12 @@ function extractTextFields(templateData) {
             if (el.bulletItems && el.bulletItems.length > 0) {
                 fields[`${keyPrefix}__bullets`] = el.bulletItems;
             }
-        } else if (el.content && String(el.content).trim()) {
-            fields[keyPrefix] = String(el.content);
+        } else if (el.content && String(el.ai_description).trim()) {
+            fields[keyPrefix] = String(el.ai_description);
         }
+    // } else if (el.content && String(el.content).trim()) {
+    //         fields[keyPrefix] = String(el.content);
+    //     }
     };
 
     // Top-level elements (not inside any section)
@@ -163,6 +166,7 @@ These fields represent bullet-point lists. Their current value is an array of st
  */
 export async function generateTailoredResume(templateData, jobDescription, profile) {
     const fields = extractTextFields(templateData);
+    console.log(fields);
 
     if (Object.keys(fields).length === 0) {
         throw new Error('No fillable text fields found in this template');
@@ -175,6 +179,7 @@ export async function generateTailoredResume(templateData, jobDescription, profi
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: { thinkingConfig: { thinkingBudget: 0 } },
     });
+     console.log("ai response", response);
 
     let fullText = '';
     for await (const chunk of response) {
