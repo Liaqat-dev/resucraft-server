@@ -2,13 +2,6 @@ import {GoogleGenAI} from '@google/genai';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-/**
- * Walk template data and collect all text element contents with unique path keys.
- * Keys encode the location so we can write values back precisely.
- *
- * - Normal text/list-item elements → key: string value
- * - Bullets elements               → key ending in "__bullets": array of strings
- */
 function extractTextFields(templateData) {
     const fields = {};
     const { elements = [], sections = [] } = templateData;
@@ -46,10 +39,7 @@ function extractTextFields(templateData) {
     return fields;
 }
 
-/**
- * Apply a map of { pathKey: newValue } back into a deep-cloned templateData.
- * Handles both plain string fields and bullets arrays (keys ending in "__bullets").
- */
+
 function applyFieldValues(templateData, values) {
     const data = JSON.parse(JSON.stringify(templateData));
     const { elements = [], sections = [] } = data;
@@ -140,7 +130,7 @@ ${certsText}
 ${jobDescription}
 
 ## Template Fields to Fill
-Each key identifies a text element in the resume template. The value is the current placeholder text.
+Each key identifies a text element in the resume template. The value is the current ai description text.
 
 ${JSON.stringify(fields, null, 2)}
 

@@ -4,6 +4,10 @@ dotenv.config();
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { BrevoClient } = require('@getbrevo/brevo');
+
 // EMAIL_PROVIDER=gmail | resend  (default: gmail)
 const PROVIDER = (process.env.EMAIL_PROVIDER || 'gmail').toLowerCase();
 
@@ -41,12 +45,23 @@ if (PROVIDER === 'resend') {
     resend = new Resend(process.env.RESEND_API_KEY);
 }
 
+// ── Brevo ─────────────────────────────────────────────────────────────────────
+let brevoClient = null;
+
+if (PROVIDER === 'brevo') {
+    console.log('[emailService] Provider: Brevo');
+    console.log('[emailService] BREVO_API_KEY set:', !!process.env.BREVO_API_KEY);
+
+    brevoClient = new BrevoClient({
+        apiKey: process.env.BREVO_API_KEY
+    });
+}
+
+
 // ── from address ──────────────────────────────────────────────────────────────
 const fromAddress = (name) => {
     const appName = name || process.env.APP_NAME || 'Your App';
     if (PROVIDER === 'resend') {
-        // Use EMAIL_FROM for Resend (must be a verified domain, e.g. noreply@yourdomain.com)
-        // Falls back to Resend's sandbox sender for testing
         return `"${appName}" <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
     }
     return `"${appName}" <${process.env.EMAIL_USER}>`;
@@ -54,6 +69,8 @@ const fromAddress = (name) => {
 
 // ── internal send helper ──────────────────────────────────────────────────────
 const sendMail = async ({ to, subject, html, fromName }) => {
+    const appName = fromName || process.env.APP_NAME || 'Your App';
+
     if (PROVIDER === 'resend') {
         const { error } = await resend.emails.send({
             from: fromAddress(fromName),
@@ -62,6 +79,17 @@ const sendMail = async ({ to, subject, html, fromName }) => {
             html
         });
         if (error) throw new Error(error.message);
+
+    } else if (PROVIDER === 'brevo') {
+        await brevoClient.transactionalEmails.sendTransacEmail({
+            sender: {
+                email: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+                name: appName
+            },
+            to: [{ email: to }],
+            subject,
+            htmlContent: html
+        });
     } else {
         await transporter.sendMail({ from: fromAddress(fromName), to, subject, html });
     }
