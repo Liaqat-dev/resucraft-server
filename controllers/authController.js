@@ -392,6 +392,27 @@ export const updateAccountInfo = catchAsync(async (req, res) => {
 });
 
 /**
+ * Get basic info of any user by ID (username and profile pic)
+ */
+export const getUserBasicInfo = catchAsync(async (req, res) => {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select('username profilePic');
+
+    if (!user) {
+        throw new AppError('User not found', 404);
+    }
+
+    res.json({
+        success: true,
+        user: {
+            user_name: user.username,
+            userprofile: user.profilePic?.url || null
+        }
+    });
+});
+
+/**
  * Get profile completion score for the current user.
  * Computes weights server-side so mobile / other clients can consume this too.
  *

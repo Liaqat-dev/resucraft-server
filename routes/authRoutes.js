@@ -18,7 +18,8 @@ import {
     getStats,
     getActivity,
     updateAccountInfo,
-    getProfileCompletion
+    getProfileCompletion,
+    getUserBasicInfo
 } from '#controllers/authController.js';
 import { protect, requireVerified } from '#middlewares/authMiddleware.js';
 import { uploadProfilePic } from '#middlewares/upload.js';
@@ -78,6 +79,9 @@ router.post('/reset-password/:token', strictLimiter, resetPassword);
 
 // Token Refresh
 router.post('/refresh', refresh);
+
+// User Info (Public)
+router.get('/user/:userId', getUserBasicInfo);
 
 // ============================================
 // PROTECTED ROUTES (Authentication Required)
