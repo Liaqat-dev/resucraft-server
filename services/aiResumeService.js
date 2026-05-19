@@ -189,7 +189,8 @@ export async function generateTailoredResume(templateData, jobDescription, profi
     // }
 
     const response = await client.chat.completions.create({
-        model: "openai/gpt-oss-120b",
+        // model: "openai/gpt-oss-120b",
+        model: "meta/llama-3.3-70b-instruct",
         messages: [
             {
                 role: "user",

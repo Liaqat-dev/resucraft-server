@@ -131,6 +131,7 @@ export function handleInterviewSocket(ws, req) {
     let intentionalEnd = false;   // set when user triggers end_interview
     let jobDescription = '';
     let candidateProfile = '';
+    let userTranscriptBuffer = '';  // accumulates streamed inputTranscription chunks
 
     function send(obj) {
         if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));
@@ -175,13 +176,22 @@ export function handleInterviewSocket(ws, req) {
                         send({ type: 'transcript', speaker: 'ai', text });
                     },
 
-                    // Candidate speech transcribed by Gemini Live (inputAudioTranscription)
+                    // Candidate speech transcribed by Gemini Live (inputAudioTranscription).
+                    // Gemini streams these in small chunks (especially for non-Latin scripts),
+                    // so accumulate and flush the full sentence on turnComplete.
                     onUserText: (text) => {
-                        transcriptLines.push(`Candidate: ${text}`);
-                        send({ type: 'transcript', speaker: 'user', text });
+                        userTranscriptBuffer += text;
                     },
 
-                    onTurnComplete: () => send({ type: 'turn_complete' }),
+                    onTurnComplete: () => {
+                        if (userTranscriptBuffer.trim()) {
+                            const text = userTranscriptBuffer.trim();
+                            userTranscriptBuffer = '';
+                            transcriptLines.push(`Candidate: ${text}`);
+                            send({ type: 'transcript', speaker: 'user', text });
+                        }
+                        send({ type: 'turn_complete' });
+                    },
 
                     onReady: () => {
                         sessionStarted = true;
