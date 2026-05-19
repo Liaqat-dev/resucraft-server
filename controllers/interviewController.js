@@ -48,6 +48,7 @@ Rules:
 // ── Feedback generation ───────────────────────────────────────────────────────
 
 async function generateFeedback(transcriptLines, jobDescription, candidateProfile) {
+    console.log('[Feedback] Using model: meta/llama-3.3-70b-instruct');
     if (!transcriptLines.length) {
         return {
             overallScore: 0,
@@ -239,6 +240,7 @@ export function handleInterviewSocket(ws, req) {
                 gemini = null;
 
                 send({ type: 'ending' });
+                console.log(transcriptLines.join('\n'));
 
                 try {
                     const feedbackData = await generateFeedback(
