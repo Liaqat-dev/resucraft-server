@@ -1,10 +1,4 @@
 import {GoogleGenAI} from '@google/genai';
-import OpenAI from "openai";
-
-const client = new OpenAI({
-    baseURL: "https://integrate.api.nvidia.com/v1",
-    apiKey: process.env.OPENAI_API_KEY,
-});
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -169,58 +163,25 @@ export async function generateTailoredResume(templateData, jobDescription, profi
     }
 
     const prompt = buildPrompt(profile, jobDescription, fields);
-    //
-    // const response = await ai.models.generateContentStream({
-    //     model: 'gemini-2.5-flash',
-    //     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    //     config: { thinkingConfig: { thinkingBudget: 0 } },
-    // });
-    //  console.log("ai response", response);
-    //
-    // let fullText = '';
-    // for await (const chunk of response) {
-    //     fullText += chunk.text;
-    // }
-    //
-    // // Strip markdown code fences in case Gemini wraps the response
-    // const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-    // if (!jsonMatch) {
-    //     throw new Error('AI did not return a valid JSON response');
-    // }
 
-    const response = await client.chat.completions.create({
-        // model: "openai/gpt-oss-120b",
-        model: "meta/llama-3.3-70b-instruct",
-        messages: [
-            {
-                role: "user",
-                content: prompt,
-            },
-        ],
-        temperature: 1,
-        top_p: 1,
-        max_tokens: 4096,
-        stream: true,
+    const response = await ai.models.generateContentStream({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { thinkingConfig: { thinkingBudget: 0 } },
     });
 
-    console.log("ai response", response);
-
-    let fullText = "";
-
+    let fullText = '';
     for await (const chunk of response) {
-        fullText += chunk.choices?.[0]?.delta?.content || "";
+        fullText += chunk.text;
     }
 
-// Strip markdown code fences in case model wraps JSON
+    // Strip markdown code fences in case Gemini wraps the response
     const jsonMatch = fullText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
+        console.error('[aiResumeService] raw fullText:', fullText);
         throw new Error("AI did not return a valid JSON response");
     }
-
-    const parsedJson = JSON.parse(jsonMatch[0]);
-
-    console.log(parsedJson);
 
     const values = JSON.parse(jsonMatch[0]);
     return applyFieldValues(templateData, values);

@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from '@google/genai';
+import { GoogleGenAI, Modality, StartSensitivity, EndSensitivity } from '@google/genai';
 import { spawn } from 'child_process';
 import { createRequire } from 'module';
 
@@ -62,6 +62,16 @@ export class GeminiLiveSession {
                         parts: [{ text: this.systemPrompt }],
                     },
                     inputAudioTranscription: {},   // enables STT for candidate speech
+                    realtimeInputConfig: {
+                        automaticActivityDetection: {
+                            // Defaults (LOW/LOW) make Gemini wait for a long silence gap
+                            // before it considers the candidate done talking — this is
+                            // what makes replies feel like they take "forever".
+                            startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+                            endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH,
+                            silenceDurationMs: 500,
+                        },
+                    },
                 },
                 callbacks: {
                     onopen: () => {

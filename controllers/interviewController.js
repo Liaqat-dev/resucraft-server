@@ -1,12 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { GoogleGenAI } from '@google/genai';
 import { GeminiLiveSession } from '#services/geminiLiveService.js';
-import OpenAI from "openai";
 
-const openaiClient = new OpenAI({
-    baseURL: "https://integrate.api.nvidia.com/v1",
-    apiKey: process.env.OPENAI_API_KEY,
-});
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const FEEDBACK_MODEL = 'gemini-2.5-flash';
 
 // ── System prompt ─────────────────────────────────────────────────────────────
@@ -48,7 +44,7 @@ Rules:
 // ── Feedback generation ───────────────────────────────────────────────────────
 
 async function generateFeedback(transcriptLines, jobDescription, candidateProfile) {
-    console.log('[Feedback] Using model: meta/llama-3.3-70b-instruct');
+    console.log(`[Feedback] Using model: ${FEEDBACK_MODEL}`);
     if (!transcriptLines.length) {
         return {
             overallScore: 0,
@@ -82,45 +78,33 @@ Scoring criteria:
 
 For strengths and improvements, be specific — reference actual moments or patterns from the transcript, not generic advice.
 
-Return ONLY a valid JSON object with this exact structure, no markdown, no code fences:
-{
-  "overallScore": number,
-  "communicationScore": number,
-  "technicalScore": number,
-  "relevanceScore": number,
-  "strengths": ["string", ...],
-  "improvements": ["string", ...],
-  "summary": "string"
-}`;
+Return ONLY the JSON object, nothing else.`;
 
-    // const response = await openaiClient.chat.completions.create({
-    //     model: "openai/gpt-oss-120b",
-    //     messages: [{ role: "user", content: prompt }],
-    //     temperature: 0.3,       // lower temp for consistent structured output
-    //     top_p: 1,
-    //     max_tokens: 1024,
-    //     stream: true,
-    // });
-    const response = await openaiClient.chat.completions.create({
-        model: "meta/llama-3.3-70b-instruct",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
-        top_p: 1,
-        max_tokens: 1024,
-        stream: true,
+    const result = await ai.models.generateContent({
+        model: FEEDBACK_MODEL,
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: 'object',
+                properties: {
+                    overallScore:       { type: 'number' },
+                    communicationScore: { type: 'number' },
+                    technicalScore:     { type: 'number' },
+                    relevanceScore:     { type: 'number' },
+                    strengths:    { type: 'array', items: { type: 'string' } },
+                    improvements: { type: 'array', items: { type: 'string' } },
+                    summary:      { type: 'string' },
+                },
+                required: [
+                    'overallScore', 'communicationScore', 'technicalScore',
+                    'relevanceScore', 'strengths', 'improvements', 'summary',
+                ],
+            },
+        },
     });
 
-    let fullText = "";
-    for await (const chunk of response) {
-        fullText += chunk.choices?.[0]?.delta?.content || "";
-    }
-
-    const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-        throw new Error("GPT-OSS did not return a valid JSON response");
-    }
-
-    return JSON.parse(jsonMatch[0]);
+    return JSON.parse(result.text);
 }
 // ── WebSocket handler ─────────────────────────────────────────────────────────
 
