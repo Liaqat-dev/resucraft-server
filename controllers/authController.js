@@ -360,6 +360,12 @@ export const updateAccountInfo = catchAsync(async (req, res) => {
     if (username !== undefined) {
         const trimmed = username.toLowerCase().trim();
         if (trimmed !== user.username) {
+            if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(trimmed) || trimmed.length < 3) {
+                throw new AppError(
+                    'Username must be at least 3 characters, start with a letter, and contain only letters, numbers and underscores',
+                    400
+                );
+            }
             const taken = await User.findOne({username: trimmed, _id: {$ne: userId}});
             if (taken) throw new AppError('Username is already taken', 400);
             user.username = trimmed;

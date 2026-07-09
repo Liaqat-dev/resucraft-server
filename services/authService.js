@@ -23,6 +23,17 @@ export const registerUser = async (userData, req) => {
         throw new AppError('Email, and Username are required', 400);
     }
 
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(username) || username.length < 3) {
+        throw new AppError(
+            'Username must be at least 3 characters, start with a letter, and contain only letters, numbers and underscores',
+            400
+        );
+    }
+
+    if (!/^[a-zA-Z][^\s@]*@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new AppError('Email must be valid and start with a letter', 400);
+    }
+
     // Validate password for local auth
     if (provider === 'local') {
         if (!password) {
